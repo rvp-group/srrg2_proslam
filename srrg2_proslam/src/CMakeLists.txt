@@ -1,0 +1,4 @@
+add_subdirectory(srrg2_proslam_adaptation)
+add_subdirectory(srrg2_proslam_localization)
+add_subdirectory(srrg2_proslam_mapping)
+add_subdirectory(srrg2_proslam_tracking)
