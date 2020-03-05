@@ -55,9 +55,9 @@ You should use our package [`srrg2_executor`](https://github.com/srrg-sapienza/s
 
 * [`kitti`](../configurations/kitti.conf): example [dataset](https://drive.google.com/open?id=1u_d4qp5p7eyWQk4zZhI8x13uEB_Ut7pC).
 * [`euroc`](../configurations/euroc.conf): example [dataset](https://drive.google.com/open?id=1g6_QudgZetukSTe6MwYxauaei_8n_lza).
-* [`malaga`](../configurations/malaga.conf) example [dataset](https://drive.google.com/open?id=1u_d4qp5p7eyWQk4zZhI8x13uEB_Ut7pC)
-* [`icl`](../configurations/icl.conf) example [dataset](https://drive.google.com/open?id=1HBEmz0qBxFUTrk1K4pJIUNPpJYhgMHYD)
-* [`tum`](../configurations/tum.conf) example [dataset](https://drive.google.com/open?id=1qPavF3iHuoeG7P_cVUUQ_nyXKE0miR-z)
+* [`malaga`](../configurations/malaga.conf): example [dataset](https://drive.google.com/open?id=1u_d4qp5p7eyWQk4zZhI8x13uEB_Ut7pC)
+* [`icl`](../configurations/icl.conf): example [dataset](https://drive.google.com/open?id=1HBEmz0qBxFUTrk1K4pJIUNPpJYhgMHYD)
+* [`tum`](../configurations/tum.conf): example [dataset](https://drive.google.com/open?id=1qPavF3iHuoeG7P_cVUUQ_nyXKE0miR-z)
 
 ###### Example Output (Stereo)
 ![multi-lidar-output](../configurations/OUTPUT_MAP_kitti_00.png)
