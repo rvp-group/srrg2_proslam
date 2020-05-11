@@ -1,5 +1,7 @@
 #include "fixtures.hpp"
-#include "srrg2_proslam_mapping/landmarks/filters/projective_point_ekf.h"
+#include "srrg2_proslam/mapping/landmarks/filters/projective_point_ekf.h"
+
+#include "srrg2_proslam/mapping/instances.cpp"
 
 // ds sampling configuration for synthetic tests
 constexpr size_t number_of_runs        = 10;
@@ -27,7 +29,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Translations_ZeroNoise) {
 
     // ds process all samples
     for (size_t j = 0; j < number_of_transitions; ++j) {
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(point_projections_noisy[j + 1], Matrix2d::Identity());
       filter.compute();
 
@@ -63,7 +65,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Translations_TransitionNoise) {
     for (size_t j = 0; j < number_of_transitions; ++j) {
       Matrix3d transition_covariance(Matrix3d::Identity());
       transition_covariance *= 0.1 /*overestimating noise*/;
-      filter.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter.setMeasurement(point_projections_noisy[j + 1], Matrix2d::Identity());
       filter.compute();
 
@@ -100,7 +102,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Translations_MeasurementNoise) {
     for (size_t j = 0; j < number_of_transitions; ++j) {
       Matrix2d measurement_covariance(Matrix2d::Identity());
       measurement_covariance *= 10.0 /*generous noise estimate*/;
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(point_projections_noisy[j + 1], measurement_covariance);
       filter.compute();
 
@@ -139,7 +141,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Translations_FullNoise) {
       transition_covariance *= 0.1 /*generous noise estimate*/;
       Matrix2d measurement_covariance(Matrix2d::Identity());
       measurement_covariance *= 10.0 /*generous noise estimate*/;
-      filter.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter.setMeasurement(point_projections_noisy[j + 1], measurement_covariance);
       filter.compute();
 
@@ -173,7 +175,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Rotations_ZeroNoise) {
 
     // ds process all samples
     for (size_t j = 0; j < number_of_transitions; ++j) {
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(point_projections_noisy[j + 1], Matrix2d::Identity());
       filter.compute();
 
@@ -209,7 +211,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Rotations_TransitionNoise) {
     for (size_t j = 0; j < number_of_transitions; ++j) {
       Matrix3d transition_covariance(Matrix3d::Identity());
       transition_covariance *= 0.1 /*generous noise estimate*/;
-      filter.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter.setMeasurement(point_projections_noisy[j + 1], Matrix2d::Identity());
       filter.compute();
 
@@ -246,7 +248,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Rotations_MeasurementNoise) {
     for (size_t j = 0; j < number_of_transitions; ++j) {
       Matrix2d measurement_covariance(Matrix2d::Identity());
       measurement_covariance *= 10.0 /*generous noise estimate*/;
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(point_projections_noisy[j + 1], measurement_covariance);
       filter.compute();
 
@@ -285,7 +287,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Rotations_FullNoise) {
       transition_covariance *= 0.1 /*generous noise estimate*/;
       Matrix2d measurement_covariance(Matrix2d::Identity());
       measurement_covariance *= 10.0 /*generous noise estimate*/;
-      filter.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter.setMeasurement(point_projections_noisy[j + 1], measurement_covariance);
       filter.compute();
 
@@ -319,7 +321,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Transforms_ZeroNoise) {
 
     // ds process all samples
     for (size_t j = 0; j < number_of_transitions; ++j) {
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(point_projections_noisy[j + 1], Matrix2d::Identity());
       filter.compute();
 
@@ -358,7 +360,7 @@ TEST_F(SyntheticDouble, ProjectivePointEKF_Transforms_FullNoise) {
       transition_covariance *= 0.1 /*generous noise estimate*/;
       Matrix2d measurement_covariance(Matrix2d::Identity());
       measurement_covariance *= 10.0 /*generous noise estimate*/;
-      filter.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter.setMeasurement(point_projections_noisy[j + 1], measurement_covariance);
       filter.compute();
 

@@ -7,8 +7,8 @@
 #include <srrg_qgl_viewport/viewer_core_shared_qgl.h>
 #include <srrg_system_utils/parse_command_line.h>
 
-#include "srrg2_proslam_adaptation/instances.h"
-#include "srrg2_proslam_tracking/instances.h"
+#include "srrg2_proslam/sensor_processing/instances.h"
+#include "srrg2_proslam/tracking/instances.h"
 
 using namespace srrg2_core;
 using namespace srrg2_slam_interfaces;
@@ -68,8 +68,8 @@ int main(int argc_, char** argv_) {
 
   // ds allocate adaptor from configuration
   manager.read(config_file.value());
-  MeasurementAdaptorStereoProjectivePtr adaptor =
-    manager.getByName<MeasurementAdaptorStereoProjective>("adaptor_stereo_projective");
+  RawDataPreprocessorStereoProjectivePtr adaptor =
+    manager.getByName<RawDataPreprocessorStereoProjective>("adaptor_stereo_projective");
   if (!adaptor) {
     std::cerr << "ERROR: could not instantiate adaptor from configuration file: "
               << config_file.value() << std::endl;
@@ -109,11 +109,11 @@ int main(int argc_, char** argv_) {
 
   // ds upcast and set measurements to adaptor TODO remove smart pointer passing by reference
   BaseSensorMessagePtr message = stereo_message;
-  adaptor->setMeasurement(message);
+  adaptor->setRawData(message);
 
   // ds adapt measurements and store results in stereo points
   PointIntensityDescriptor4fVectorCloud stereo_points;
-  adaptor->setDest(&stereo_points);
+  adaptor->setMeas(&stereo_points);
   adaptor->compute();
 
   // ds platform (TODO load from disk instead of hardcoded KITTI 00)
@@ -177,7 +177,7 @@ int main(int argc_, char** argv_) {
 
 void generateConfig(ConfigurableManager& manager_, const std::string& filepath_) {
   // ds put measurement adaptor and triangulator into the same configuration
-  manager_.create<MeasurementAdaptorStereoProjective>("measurement_adaptor_stereo_projective");
+  manager_.create<RawDataPreprocessorStereoProjective>("measurement_adaptor_stereo_projective");
   manager_.create<TriangulatorRigidStereoDescriptors>("rigid_stereo_triangulator");
   manager_.write(filepath_);
   std::cerr << "generated default configuration: " << filepath_ << std::endl;

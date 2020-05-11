@@ -1,8 +1,8 @@
 #include <iostream>
 
-#include "srrg2_proslam_adaptation/instances.h"
-#include "srrg_system_utils/parse_command_line.h"
-#include "srrg_system_utils/system_utils.h"
+#include "srrg2_proslam/sensor_processing/instances.h"
+#include <srrg_system_utils/parse_command_line.h>
+#include <srrg_system_utils/system_utils.h>
 
 using namespace srrg2_core;
 using namespace srrg2_slam_interfaces;
@@ -13,7 +13,7 @@ const char* banner[] = {"This program computes a set of keypoints for the provid
                         0};
 
 int main(int argc_, char** argv_) {
-  srrg2_proslam_adaptation_registerTypes();
+  srrg2_proslam_sensor_processing_registerTypes();
 
   // ds set up CLI parameters
   // clang-format off

@@ -15,16 +15,16 @@ TEST_F(ICL, 00To00_Tracker_ProjectiveBruteforce_MergerDefault) {
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceProjectiveDepthPtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceProjectiveDepth>(0);
+  TrackerSliceProcessorProjectiveDepthPtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorProjectiveDepth>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceProjectiveDepthPtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceProjectiveDepth>(0);
+  AlignerSliceProcessorProjectiveDepthPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveDepth>(0);
   ASSERT_NOTNULL(aligner_slice);
-  MeasurementAdaptorMonocularDepthPtr adaptor =
-    tracker_slice->param_adaptor.value<MeasurementAdaptorMonocularDepth>();
+  RawDataPreprocessorMonocularDepthPtr adaptor =
+    tracker_slice->param_adaptor.value<RawDataPreprocessorMonocularDepth>();
   ASSERT_NOTNULL(adaptor);
   adaptor->param_depth_scaling_factor_to_meters.setValue(1.0 /*test only*/);
 
@@ -59,9 +59,9 @@ TEST_F(ICL, 00To00_Tracker_ProjectiveBruteforce_MergerDefault) {
     // ds process measurement
     tracker_slice->param_measurement_slice_name.setValue("points");
     aligner_slice->param_fixed_slice_name.setValue("points");
-    tracker->setMeasurement(message_00);
+    tracker->setRawData(message_00);
     Property_<PointIntensityDescriptor3fVectorCloud*>* measurement_property =
-      tracker->measurementScene().property<Property_<PointIntensityDescriptor3fVectorCloud*>>(
+      tracker->measurementContainer().property<Property_<PointIntensityDescriptor3fVectorCloud*>>(
         "points");
     ASSERT_NOTNULL(measurement_property);
     tracker->compute();
@@ -83,7 +83,7 @@ TEST_F(ICL, 00To00_Tracker_ProjectiveBruteforce_MergerDefault) {
     ASSERT_EQ(tracker->numFramesProcessed(), step + 1);
     ASSERT_EQ(measurement_property->value()->size(), number_of_points_measured);
     ASSERT_EQ(global_map_property->value()->size(), number_of_points_in_map);
-    ASSERT_LT(geometry3d::t2tnq(tracker->estimate()).norm(), 1e-5);
+    ASSERT_LT(geometry3d::t2tnq(tracker->robotInLocalMap()).norm(), 1e-5);
   }
 }
 
@@ -98,16 +98,16 @@ TEST_F(ICL, 00To50_Tracker_ProjectiveBruteforce) {
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceProjectiveDepthPtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceProjectiveDepth>(0);
+  TrackerSliceProcessorProjectiveDepthPtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorProjectiveDepth>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceProjectiveDepthPtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceProjectiveDepth>(0);
+  AlignerSliceProcessorProjectiveDepthPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveDepth>(0);
   ASSERT_NOTNULL(aligner_slice);
-  MeasurementAdaptorMonocularDepthPtr adaptor =
-    tracker_slice->param_adaptor.value<MeasurementAdaptorMonocularDepth>();
+  RawDataPreprocessorMonocularDepthPtr adaptor =
+    tracker_slice->param_adaptor.value<RawDataPreprocessorMonocularDepth>();
   ASSERT_NOTNULL(adaptor);
   adaptor->param_depth_scaling_factor_to_meters.setValue(1.0 /*test only*/);
 
@@ -130,7 +130,7 @@ TEST_F(ICL, 00To50_Tracker_ProjectiveBruteforce) {
   ASSERT_EQ(aligner->status(), MultiAligner3DQR::Status::Fail);
 
   // ds process first frame
-  tracker->setMeasurement(message_00);
+  tracker->setRawData(message_00);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Initializing);
   ASSERT_EQ(tracker->numFramesProcessed(), 1);
@@ -139,19 +139,19 @@ TEST_F(ICL, 00To50_Tracker_ProjectiveBruteforce) {
   ASSERT_NOTNULL(global_map_property);
 
   // ds process second frame
-  tracker->setMeasurement(message_01);
+  tracker->setRawData(message_01);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 2);
 
   // ds jump 50 frames ahead (not to brutal in ICL living room 0)
-  tracker->setMeasurement(message_50);
+  tracker->setRawData(message_50);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 3);
 
   // ds evaluate final error (tracker estimate is already inverted)
-  const Vector6f error = geometry3d::t2tnq(tracker->estimate() * camera_50_from_00);
+  const Vector6f error = geometry3d::t2tnq(tracker->robotInLocalMap().inverse() * camera_50_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.02);
   ASSERT_LT_ABS(error(1), 0.02);
@@ -176,13 +176,13 @@ TEST_F(KITTI, 00To00_Tracker_ProjectiveBruteforce_MergerDefault) {
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceStereoProjectivePtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceStereoProjective>(0);
+  TrackerSliceProcessorStereoProjectivePtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorStereoProjective>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceStereoProjective>(0);
+  AlignerSliceProcessorProjectiveStereoPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveStereo>(0);
   ASSERT_NOTNULL(aligner_slice);
   aligner_slice->param_robustifier->param_chi_threshold.setValue(1000);
   ASSERT_NOTNULL(tracker_slice->param_adaptor.value());
@@ -234,9 +234,9 @@ TEST_F(KITTI, 00To00_Tracker_ProjectiveBruteforce_MergerDefault) {
     // ds process measurement
     tracker_slice->param_measurement_slice_name.setValue("points");
     aligner_slice->param_fixed_slice_name.setValue("points");
-    tracker->setMeasurement(messages[0]);
+    tracker->setRawData(messages[0]);
     Property_<PointIntensityDescriptor4fVectorCloud*>* measurement_property =
-      tracker->measurementScene().property<Property_<PointIntensityDescriptor4fVectorCloud*>>(
+      tracker->measurementContainer().property<Property_<PointIntensityDescriptor4fVectorCloud*>>(
         "points");
     ASSERT_NOTNULL(measurement_property);
     tracker->compute();
@@ -253,7 +253,7 @@ TEST_F(KITTI, 00To00_Tracker_ProjectiveBruteforce_MergerDefault) {
     ASSERT_EQ(tracker->numFramesProcessed(), step + 1);
     ASSERT_EQ(measurement_property->value()->size(), number_of_points_measured);
     ASSERT_EQ(global_map_property->value()->size(), number_of_points_in_map);
-    ASSERT_LT(geometry3d::t2tnq(tracker->estimate()).norm(), 1e-5);
+    ASSERT_LT(geometry3d::t2tnq(tracker->robotInLocalMap()).norm(), 1e-5);
   }
 }
 
@@ -271,13 +271,13 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBF_NoMerges) {
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceStereoProjectivePtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceStereoProjective>(0);
+  TrackerSliceProcessorStereoProjectivePtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorStereoProjective>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceStereoProjective>(0);
+  AlignerSliceProcessorProjectiveStereoPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveStereo>(0);
   ASSERT_NOTNULL(aligner_slice);
   aligner_slice->param_robustifier->param_chi_threshold.setValue(1000);
   ASSERT_NOTNULL(tracker_slice->param_adaptor.value());
@@ -325,7 +325,7 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBF_NoMerges) {
   ASSERT_EQ(aligner->status(), MultiAligner3DQR::Status::Fail);
 
   // ds process first stereo frame
-  tracker->setMeasurement(messages[0]);
+  tracker->setRawData(messages[0]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Initializing);
   ASSERT_EQ(tracker->numFramesProcessed(), 1);
@@ -333,28 +333,28 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBF_NoMerges) {
     global_map.property<Property_<PointIntensityDescriptor3fVectorCloud*>>("points");
   ASSERT_NOTNULL(global_map_property);
 
-  tracker->setMeasurement(messages[1]);
+  tracker->setRawData(messages[1]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 2);
 
-  tracker->setMeasurement(messages[2]);
+  tracker->setRawData(messages[2]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 3);
 
-  tracker->setMeasurement(messages[3]);
+  tracker->setRawData(messages[3]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 4);
 
-  tracker->setMeasurement(messages[4]);
+  tracker->setRawData(messages[4]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 5);
 
   // ds evaluate final error (tracker estimate is already inverted)
-  const Vector6f error = geometry3d::t2tnq(tracker->estimate() * camera_04_from_00);
+  const Vector6f error = geometry3d::t2tnq(tracker->robotInLocalMap().inverse() * camera_04_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.2);
   ASSERT_LT_ABS(error(1), 0.2);
@@ -375,13 +375,13 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerTriangulation_WeightedMe
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceStereoProjectivePtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceStereoProjective>(0);
+  TrackerSliceProcessorStereoProjectivePtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorStereoProjective>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceStereoProjective>(0);
+  AlignerSliceProcessorProjectiveStereoPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveStereo>(0);
   ASSERT_NOTNULL(aligner_slice);
   aligner_slice->param_robustifier->param_chi_threshold.setValue(1000);
   ASSERT_NOTNULL(tracker_slice->param_adaptor.value());
@@ -431,7 +431,7 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerTriangulation_WeightedMe
   ASSERT_EQ(aligner->status(), MultiAligner3DQR::Status::Fail);
 
   // ds process first stereo frame
-  tracker->setMeasurement(messages[0]);
+  tracker->setRawData(messages[0]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Initializing);
   ASSERT_EQ(tracker->numFramesProcessed(), 1);
@@ -439,28 +439,28 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerTriangulation_WeightedMe
     global_map.property<Property_<PointIntensityDescriptor3fVectorCloud*>>("points");
   ASSERT_NOTNULL(global_map_property);
 
-  tracker->setMeasurement(messages[1]);
+  tracker->setRawData(messages[1]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 2);
 
-  tracker->setMeasurement(messages[2]);
+  tracker->setRawData(messages[2]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 3);
 
-  tracker->setMeasurement(messages[3]);
+  tracker->setRawData(messages[3]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 4);
 
-  tracker->setMeasurement(messages[4]);
+  tracker->setRawData(messages[4]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 5);
 
   // ds evaluate final error (tracker estimate is already inverted)
-  const Vector6f error = geometry3d::t2tnq(tracker->estimate() * camera_04_from_00);
+  const Vector6f error = geometry3d::t2tnq(tracker->robotInLocalMap().inverse() * camera_04_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.2);
   ASSERT_LT_ABS(error(1), 0.2);
@@ -481,13 +481,13 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerEKF) {
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceStereoProjectivePtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceStereoProjective>(0);
+  TrackerSliceProcessorStereoProjectivePtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorStereoProjective>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceStereoProjective>(0);
+  AlignerSliceProcessorProjectiveStereoPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveStereo>(0);
   ASSERT_NOTNULL(aligner_slice);
   aligner_slice->param_robustifier->param_chi_threshold.setValue(1000);
   ASSERT_NOTNULL(tracker_slice->param_adaptor.value());
@@ -525,8 +525,9 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerEKF) {
 
   // srrg set projector to aligner slice
   ASSERT_NOTNULL(_platform);
-  aligner_slice->setPlatform(_platform);
-  merger->param_triangulator->setPlatform(_platform);
+  tracker->setPlatform(_platform);
+  //  aligner_slice->setPlatform(_platform);
+  //  merger->param_triangulator->setPlatform(_platform);
 
   // ds set global map buffer
   PropertyContainerDynamic global_map;
@@ -535,7 +536,7 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerEKF) {
   ASSERT_EQ(aligner->status(), MultiAligner3DQR::Status::Fail);
 
   // ds process first stereo frame
-  tracker->setMeasurement(messages[0]);
+  tracker->setRawData(messages[0]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Initializing);
   ASSERT_EQ(tracker->numFramesProcessed(), 1);
@@ -543,28 +544,28 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerEKF) {
     global_map.property<Property_<PointIntensityDescriptor3fVectorCloud*>>("points");
   ASSERT_NOTNULL(global_map_property);
 
-  tracker->setMeasurement(messages[1]);
+  tracker->setRawData(messages[1]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 2);
 
-  tracker->setMeasurement(messages[2]);
+  tracker->setRawData(messages[2]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 3);
 
-  tracker->setMeasurement(messages[3]);
+  tracker->setRawData(messages[3]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 4);
 
-  tracker->setMeasurement(messages[4]);
+  tracker->setRawData(messages[4]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 5);
 
   // ds evaluate final error (tracker estimate is already inverted)
-  const Vector6f error = geometry3d::t2tnq(tracker->estimate() * camera_04_from_00);
+  const Vector6f error = geometry3d::t2tnq(tracker->robotInLocalMap().inverse() * camera_04_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.2);
   ASSERT_LT_ABS(error(1), 0.2);
@@ -585,13 +586,13 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerTriangulation_PoseBasedS
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceStereoProjectivePtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceStereoProjective>(0);
+  TrackerSliceProcessorStereoProjectivePtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorStereoProjective>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceStereoProjective>(0);
+  AlignerSliceProcessorProjectiveStereoPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveStereo>(0);
   ASSERT_NOTNULL(aligner_slice);
   aligner_slice->param_robustifier->param_chi_threshold.setValue(1000);
   ASSERT_NOTNULL(tracker_slice->param_adaptor.value());
@@ -641,7 +642,7 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerTriangulation_PoseBasedS
   ASSERT_EQ(aligner->status(), MultiAligner3DQR::Status::Fail);
 
   // ds process first stereo frame
-  tracker->setMeasurement(messages[0]);
+  tracker->setRawData(messages[0]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Initializing);
   ASSERT_EQ(tracker->numFramesProcessed(), 1);
@@ -649,28 +650,28 @@ TEST_F(KITTI, 00To04_Tracker_ProjectiveBruteforce_MergerTriangulation_PoseBasedS
     global_map.property<Property_<PointIntensityDescriptor3fVectorCloud*>>("points");
   ASSERT_NOTNULL(global_map_property);
 
-  tracker->setMeasurement(messages[1]);
+  tracker->setRawData(messages[1]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 2);
 
-  tracker->setMeasurement(messages[2]);
+  tracker->setRawData(messages[2]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 3);
 
-  tracker->setMeasurement(messages[3]);
+  tracker->setRawData(messages[3]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 4);
 
-  tracker->setMeasurement(messages[4]);
+  tracker->setRawData(messages[4]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 5);
 
   // ds evaluate final error (tracker estimate is already inverted)
-  const Vector6f error = geometry3d::t2tnq(tracker->estimate() * camera_04_from_00);
+  const Vector6f error = geometry3d::t2tnq(tracker->robotInLocalMap().inverse() * camera_04_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.2);
   ASSERT_LT_ABS(error(1), 0.2);
@@ -691,13 +692,13 @@ TEST_F(KITTI, 00To04_Tracker_Bruteforce_MergerEKF) {
   MultiAligner3DQRPtr aligner = tracker->param_aligner.getSharedPtr<MultiAligner3DQR>();
   ASSERT_NOTNULL(aligner);
   ASSERT_EQ(tracker->param_slice_processors.size(), 2);
-  TrackerSliceStereoProjectivePtr tracker_slice =
-    tracker->param_slice_processors.getSharedPtr<TrackerSliceStereoProjective>(0);
+  TrackerSliceProcessorStereoProjectivePtr tracker_slice =
+    tracker->param_slice_processors.getSharedPtr<TrackerSliceProcessorStereoProjective>(0);
   ASSERT_NOTNULL(tracker_slice);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr aligner_slice =
-    aligner->param_slice_processors.getSharedPtr<AlignerSliceStereoProjective>(0);
+  AlignerSliceProcessorProjectiveStereoPtr aligner_slice =
+    aligner->param_slice_processors.getSharedPtr<AlignerSliceProcessorProjectiveStereo>(0);
   ASSERT_NOTNULL(aligner_slice);
   aligner_slice->param_robustifier->param_chi_threshold.setValue(1000);
   ASSERT_NOTNULL(tracker_slice->param_adaptor.value());
@@ -739,7 +740,7 @@ TEST_F(KITTI, 00To04_Tracker_Bruteforce_MergerEKF) {
   ASSERT_EQ(aligner->status(), MultiAligner3DQR::Status::Fail);
 
   // ds process first stereo frame
-  tracker->setMeasurement(messages[0]);
+  tracker->setRawData(messages[0]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Initializing);
   ASSERT_EQ(tracker->numFramesProcessed(), 1);
@@ -747,28 +748,28 @@ TEST_F(KITTI, 00To04_Tracker_Bruteforce_MergerEKF) {
     global_map.property<Property_<PointIntensityDescriptor3fVectorCloud*>>("points");
   ASSERT_NOTNULL(global_map_property);
 
-  tracker->setMeasurement(messages[1]);
+  tracker->setRawData(messages[1]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 2);
 
-  tracker->setMeasurement(messages[2]);
+  tracker->setRawData(messages[2]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 3);
 
-  tracker->setMeasurement(messages[3]);
+  tracker->setRawData(messages[3]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 4);
 
-  tracker->setMeasurement(messages[4]);
+  tracker->setRawData(messages[4]);
   tracker->compute();
   ASSERT_EQ(tracker->status(), MultiTracker3D::Status::Tracking);
   ASSERT_EQ(tracker->numFramesProcessed(), 5);
 
   // ds evaluate final error (tracker estimate is already inverted)
-  const Vector6f error = geometry3d::t2tnq(tracker->estimate() * camera_04_from_00);
+  const Vector6f error = geometry3d::t2tnq(tracker->robotInLocalMap().inverse() * camera_04_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.2);
   ASSERT_LT_ABS(error(1), 0.2);

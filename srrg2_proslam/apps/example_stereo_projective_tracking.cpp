@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include "srrg2_proslam_tracking/instances.h"
-#include "srrg_config/configurable_manager.h"
-#include "srrg_messages/instances.h"
-#include "srrg_slam_interfaces/instances.h"
-#include "srrg_system_utils/parse_command_line.h"
+#include "srrg2_proslam/tracking/instances.h"
+#include <srrg2_slam_interfaces/instances.h>
+#include <srrg_config/configurable_manager.h>
+#include <srrg_messages/instances.h>
+#include <srrg_system_utils/parse_command_line.h>
 
 using namespace srrg2_core;
 using namespace srrg2_slam_interfaces;
@@ -101,8 +101,8 @@ int main(int argc_, char** argv_) {
   }
 
   // ds load measurement adaptor from configuration
-  MeasurementAdaptorStereoProjectivePtr adaptor(
-    manager.getByName<MeasurementAdaptorStereoProjective>("adaptor_stereo_projective"));
+  RawDataPreprocessorStereoProjectivePtr adaptor(
+    manager.getByName<RawDataPreprocessorStereoProjective>("adaptor_stereo_projective"));
   if (!adaptor) {
     std::cerr << "ERROR: unable to load measurement adaptor from configuration" << std::endl;
     return -1;
@@ -192,8 +192,8 @@ int main(int argc_, char** argv_) {
 
       // ds check if we have to provide a pose estimate
       if (name_search_method.value() == "projective_circle") {
-        std::dynamic_pointer_cast<CorrespondenceFinderProjectiveCircle4D3D>(matcher)->setEstimate(
-          motion);
+        std::dynamic_pointer_cast<CorrespondenceFinderProjectiveCircle4D3D>(matcher)
+          ->setLocalMapInSensor(motion);
       }
     }
 
@@ -212,9 +212,9 @@ int main(int argc_, char** argv_) {
 
     // ds adapt stereo measurements
     PointIntensityDescriptor4fVectorCloud stereo_matches;
-    adaptor->setMeasurement(message);
+    adaptor->setRawData(message);
     adaptor->setProjections(&projections, projection_uncertainty_radius_pixels);
-    adaptor->setDest(&stereo_matches);
+    adaptor->setMeas(&stereo_matches);
     adaptor->compute();
 
     // ds match against the tracking pool (invidually)

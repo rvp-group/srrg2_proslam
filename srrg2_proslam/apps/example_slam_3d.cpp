@@ -1,12 +1,12 @@
 #include <iostream>
 #include <thread>
 
-#include "srrg2_proslam_tracking/instances.h"
-#include "srrg_config/configurable_manager.h"
-#include "srrg_messages/instances.h"
-#include "srrg_qgl_viewport/viewer_core_shared_qgl.h"
-#include "srrg_slam_interfaces/instances.h"
-#include "srrg_system_utils/parse_command_line.h"
+#include "srrg2_proslam/tracking/instances.h"
+#include <srrg2_slam_interfaces/instances.h>
+#include <srrg_config/configurable_manager.h>
+#include <srrg_messages/instances.h>
+#include <srrg_qgl_viewport/viewer_core_shared_qgl.h>
+#include <srrg_system_utils/parse_command_line.h>
 
 using namespace srrg2_proslam;
 using namespace srrg2_qgl_viewport;
@@ -96,7 +96,7 @@ void process(ViewerCanvasPtr canvas_,
     }
 
     // ds set measurements to module
-    slammer_->setMeasurement(message_pack);
+    slammer_->setRawData(message_pack);
 
     // ds estimate current state
     slammer_->compute();
@@ -116,7 +116,7 @@ void process(ViewerCanvasPtr canvas_,
     //    std::cerr << "motion estimate (relative): " << geometry3d::t2tnq(motion_guess).transpose()
     //              << std::endl;
     //    std::cerr << " final estimate (absolute): "
-    //              << geometry3d::t2tnq(slammer_->robotPose()).transpose() << std::endl;
+    //              << geometry3d::t2tnq(slammer_->robotInWorld()).transpose() << std::endl;
     std::cerr << "frame: " << slammer_->param_tracker->numFramesProcessed()
               << " | current local map size: " << local_map_points->value()->size()
               << " | # total local maps: " << slammer_->graph()->variables().size()
@@ -137,7 +137,7 @@ void process(ViewerCanvasPtr canvas_,
     canvas_->pushColor();
     canvas_->setColor(Vector3f(0, 0, 0));
     canvas_->multMatrix(
-      (slammer_->robotPose() * slammer_->robotPoseInCurrentLocalMap().inverse()).matrix());
+      (slammer_->robotInWorld() * slammer_->robotInLocalMap().inverse()).matrix());
     canvas_->putPoints(*local_map_points->value());
     canvas_->popMatrix();
     canvas_->popAttribute();
@@ -162,15 +162,15 @@ void generateConfig(ConfigurableManager& manager_,
   switch (type_) {
     case SLAMType::ProjectiveDepth: {
       std::cerr << "generateConfig|generating for projective depth tracker" << std::endl;
-      AlignerSliceProjectiveDepthPtr aligner_slice =
-        manager_.create<AlignerSliceProjectiveDepth>("aligner_slice_projective_depth");
+      AlignerSliceProcessorProjectiveDepthPtr aligner_slice =
+        manager_.create<AlignerSliceProcessorProjectiveDepth>("aligner_slice_projective_depth");
       CorrespondenceFinderProjectiveKDTree3D3DPtr finder =
         aligner_slice->param_finder.value<CorrespondenceFinderProjectiveKDTree3D3D>();
       aligner->param_slice_processors.pushBack(aligner_slice);
-      TrackerSliceProjectiveDepthPtr tracker_slice =
-        manager_.create<TrackerSliceProjectiveDepth>("tracker_slice_projective_depth");
-      MeasurementAdaptorMonocularDepthPtr adaptor =
-        manager_.create<MeasurementAdaptorMonocularDepth>("adaptor_projective_depth");
+      TrackerSliceProcessorProjectiveDepthPtr tracker_slice =
+        manager_.create<TrackerSliceProcessorProjectiveDepth>("tracker_slice_projective_depth");
+      RawDataPreprocessorMonocularDepthPtr adaptor =
+        manager_.create<RawDataPreprocessorMonocularDepth>("adaptor_projective_depth");
       MergerCorrespondenceProjectiveDepth3DPtr merger =
         manager_.create<MergerCorrespondenceProjectiveDepth3D>("merger_projective_depth");
       SceneClipperProjective3DPtr clipper =
@@ -184,15 +184,15 @@ void generateConfig(ConfigurableManager& manager_,
     }
     case SLAMType::StereoProjective: {
       std::cerr << "generateConfig|generating for stereo tracker" << std::endl;
-      AlignerSliceStereoProjectivePtr aligner_slice =
-        manager_.create<AlignerSliceStereoProjective>("aligner_slice_stereo_projective");
+      AlignerSliceProcessorProjectiveStereoPtr aligner_slice =
+        manager_.create<AlignerSliceProcessorProjectiveStereo>("aligner_slice_stereo_projective");
       CorrespondenceFinderProjectiveKDTree4D3DPtr finder =
         aligner_slice->param_finder.value<CorrespondenceFinderProjectiveKDTree4D3D>();
       aligner->param_slice_processors.pushBack(aligner_slice);
-      TrackerSliceStereoProjectivePtr tracker_slice =
-        manager_.create<TrackerSliceStereoProjective>("tracker_slice_stereo_projective");
-      MeasurementAdaptorStereoProjectivePtr adaptor =
-        manager_.create<MeasurementAdaptorStereoProjective>("adaptor_stereo_projective");
+      TrackerSliceProcessorStereoProjectivePtr tracker_slice =
+        manager_.create<TrackerSliceProcessorStereoProjective>("tracker_slice_stereo_projective");
+      RawDataPreprocessorStereoProjectivePtr adaptor =
+        manager_.create<RawDataPreprocessorStereoProjective>("adaptor_stereo_projective");
       MergerRigidStereoTriangulationPtr merger =
         manager_.create<MergerRigidStereoTriangulation>("merger_stereo_projective");
       SceneClipperProjective3DPtr clipper =
@@ -208,15 +208,14 @@ void generateConfig(ConfigurableManager& manager_,
   }
 
   // ds allocate motion model for tracker (and aligner)
-  MultiTrackerSliceEstimationBuffer3DPtr tracker_slice_pose_history(
-    new MultiTrackerSliceEstimationBuffer3D());
+  TrackerSliceProcessorEstimationBuffer3DPtr tracker_slice_pose_history(
+    new TrackerSliceProcessorEstimationBuffer3D());
   tracker_slice_pose_history->param_measurement_slice_name.setValue("trajectory_chunk");
   tracker_slice_pose_history->param_scene_slice_name.setValue("trajectory_chunk");
   tracker_slice_pose_history->param_adaptor.setValue(
-    MeasurementAdaptorTrackerEstimate3DPtr(new MeasurementAdaptorTrackerEstimate3D()));
+    RawDataPreprocessorTrackerEstimate3DPtr(new RawDataPreprocessorTrackerEstimate3D()));
   tracker->param_slice_processors.pushBack(tracker_slice_pose_history);
-  MultiAlignerSliceMotionModel3DPtr aligner_slice_motion_model(
-    new MultiAlignerSliceMotionModel3D());
+  AlignerSliceMotionModel3DPtr aligner_slice_motion_model(new AlignerSliceMotionModel3D());
   aligner_slice_motion_model->param_fixed_slice_name.setValue("trajectory_chunk");
   aligner_slice_motion_model->param_moving_slice_name.setValue("trajectory_chunk");
   aligner_slice_motion_model->param_motion_model.setValue(
@@ -229,7 +228,8 @@ void generateConfig(ConfigurableManager& manager_,
 
   // ds configure loop closing aligner and slices (3D-3D)
   MultiAligner3DQRPtr loop_aligner = manager_.create<MultiAligner3DQR>("loop_aligner");
-  AlignerSlice3DPtr aligner_slice  = manager_.create<AlignerSlice3D>("aligner_slice_3d");
+  AlignerSliceProcessor3DPtr aligner_slice =
+    manager_.create<AlignerSliceProcessor3D>("aligner_slice_3d");
   loop_aligner->param_slice_processors.pushBack(aligner_slice);
   loop_detector->param_relocalize_aligner.setValue(loop_aligner);
   slammer->param_loop_detector.setValue(loop_detector);

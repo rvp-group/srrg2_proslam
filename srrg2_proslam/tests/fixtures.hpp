@@ -1,13 +1,13 @@
 #pragma once
 #include <unordered_map>
 
+#include <srrg2_slam_interfaces/instances.h>
 #include <srrg_config/configurable_manager.h>
 #include <srrg_messages/instances.h>
 #include <srrg_pcl/instances.h>
-#include <srrg_slam_interfaces/instances.h>
 #include <srrg_test/synthetic_world.hpp>
 
-#include "srrg2_proslam_tracking/instances.h"
+#include "srrg2_proslam/tracking/instances.h"
 
 // ds TODO burst these bastards
 using namespace srrg2_core;
@@ -300,12 +300,12 @@ protected:
     }
     points_in_world_copy = points_in_world;
     sensor_in_robot.setIdentity();
-    sensor_in_robot.translation() = Vector3_<RealType>(0.2, 0.3, 0.4);
-    sensor_in_robot.linear()      = geometry3d::a2r(Vector3_<RealType>(0, M_PI * 0.05, 0));
+    //    sensor_in_robot.translation() = Vector3_<RealType>(0.2, 0.3, 0.4);
+    //    sensor_in_robot.linear()      = geometry3d::a2r(Vector3_<RealType>(0, M_PI * 0.05, 0));
 
     robot_in_world.setIdentity();
-    robot_in_world.translation() += Vector3_<RealType>(-2, 2.5, 0);
-    robot_in_world.rotate(Eigen::AngleAxis<RealType>(0.2 * M_PI, Vector3_<RealType>::UnitZ()));
+    robot_in_world.translation() += Vector3_<RealType>(2, 2.5, 0);
+    robot_in_world.rotate(Eigen::AngleAxis<RealType>(-0.2 * M_PI, Vector3_<RealType>::UnitZ()));
     world_in_robot = robot_in_world.inverse();
 
     camera_current_in_world = robot_in_world * sensor_in_robot;
@@ -316,7 +316,7 @@ protected:
     correspondences.reserve(100);
     for (size_t i = 0; i < 100; ++i) {
       PointIntensityDescriptor_<3, RealType> point;
-      point.coordinates() = camera_current_in_world * points_in_world[i].coordinates();
+      point.coordinates() = world_in_camera_current * points_in_world[i].coordinates();
       points_in_camera.emplace_back(point);
       correspondences.emplace_back(Correspondence(i, i, 0));
     }
@@ -324,8 +324,8 @@ protected:
     // ds allocate a realistic camera matrix
     camera_projection_matrix << fx, 0, image_cols * .5, 0, fy, image_rows * .5, 0, 0, 1;
 
-    // ds define a rectified stereo baseline
-    stereo_camera_baseline << -250, 0, 0;
+    // ds define a rectified stereo baseline [px]
+    stereo_camera_baseline << 250, 0, 0;
 
     projector.reset(new ProjectorType());
     projector->setCameraMatrix(camera_projection_matrix.template cast<float>());
@@ -334,14 +334,14 @@ protected:
 
     platform.reset(new Platform);
 
-    //    Isometry3f tf_right_in_left = Isometry3f::Identity();
-    //    tf_right_in_left.translation() =
-    //      camera_projection_matrix.inverse().template cast<float>() * stereo_camera_baseline;
-    //
-    //    TransformEventPtr tf1_event(
-    //      new TransformEvent(0, "camera_right", tf_right_in_left, "camera_left"));
-    //    platform->addEvent(tf1_event);
-    //
+    Isometry3f tf_right_in_left    = Isometry3f::Identity();
+    tf_right_in_left.translation() = camera_projection_matrix.inverse().template cast<float>() *
+                                     stereo_camera_baseline.template cast<float>();
+
+    TransformEventPtr tf1_event(
+      new TransformEvent(0, "camera_right", tf_right_in_left, "camera_left"));
+    platform->addEvent(tf1_event);
+
     TransformEventPtr tf2_event(
       new TransformEvent(0, "camera_left", sensor_in_robot.template cast<float>(), "base_frame"));
     platform->addEvent(tf2_event);
@@ -360,7 +360,7 @@ protected:
   Vector2Type _projectPinhole(const Vector3Type& point_in_camera_,
                               const Vector3Type& baseline_ = Vector3Type::Zero()) const {
     Vector3Type point_homogeneous = camera_projection_matrix * point_in_camera_;
-    point_homogeneous += baseline_;
+    point_homogeneous -= baseline_;
     point_homogeneous /= point_homogeneous.z();
     return point_homogeneous.head(2);
   }
@@ -454,8 +454,8 @@ protected:
 
     // ds upcast and set measurements to adaptor TODO remove smart pointer passing by reference
     MessagePackPtr message_pack = MessagePackPtr(new MessagePack());
-    image_message_left          = ImageMessagePtr(new ImageMessage("/left", "0", 0, 0.0));
-    image_message_right         = ImageMessagePtr(new ImageMessage("/right", "0", 0, 0.0));
+    image_message_left  = ImageMessagePtr(new ImageMessage("/camera_left/image_raw", "0", 0, 0.0));
+    image_message_right = ImageMessagePtr(new ImageMessage("/camera_right/image_raw", "0", 0, 0.0));
     image_message_left->setImage(scene_flow_image_left);
     image_message_right->setImage(scene_flow_image_right);
     message_pack->messages = {image_message_left, image_message_right};
@@ -566,10 +566,12 @@ protected:
     srrg2_proslam_tracking_registerTypes();
 
     // ds get an adaptor to generate processed measurements
-    MeasurementAdaptorMonocularDepth adaptor;
+    RawDataPreprocessorMonocularDepth adaptor;
     adaptor.param_feature_extractor->param_target_number_of_keypoints.setValue(500);
     adaptor.param_feature_extractor->param_detector_threshold.setValue(5);
     adaptor.param_depth_scaling_factor_to_meters.setValue(1.0); // ds ICL has true depth images
+    adaptor.param_topic_rgb.setValue("/camera/rgb/image_color");
+    adaptor.param_topic_depth.setValue("/camera/depth/image");
 
     // ds set camera calibration
     camera_calibration_matrix << 481.2, 0, 319.5, 0, -481, 239.5, 0, 0, 1;
@@ -604,9 +606,13 @@ protected:
     Quaternionf orientation_50_in_world;
     camera_50_in_world.linear() =
       Quaternionf(0.995539, -0.00521396, 0.0821083, 0.0461804).toRotationMatrix();
-    camera_01_from_00 = camera_01_in_world.inverse() * camera_00_in_world;
-    camera_50_from_01 = camera_50_in_world.inverse() * camera_01_in_world;
-    camera_50_from_00 = camera_50_in_world.inverse() * camera_00_in_world;
+
+    Isometry3f world_in_camera_00 = camera_00_in_world.inverse();
+    Isometry3f world_in_camera_01 = camera_01_in_world.inverse();
+
+    camera_01_in_00 = world_in_camera_00 * camera_01_in_world;
+    camera_50_in_01 = world_in_camera_01 * camera_50_in_world;
+    camera_50_in_00 = world_in_camera_00 * camera_50_in_world;
 
     ASSERT_NOTNULL(message_00);
     ASSERT_NOTNULL(message_01);
@@ -624,14 +630,14 @@ protected:
     projector->param_canvas_rows.setValue(image_rows);
 
     // ds adapt point measurements from UV and D to UV-D
-    ASSERT_TRUE(adaptor.setMeasurement(message_00));
-    adaptor.setDest(&measurements_projective_depth_00);
+    ASSERT_TRUE(adaptor.setRawData(message_00));
+    adaptor.setMeas(&measurements_projective_depth_00);
     adaptor.compute();
-    ASSERT_TRUE(adaptor.setMeasurement(message_01));
-    adaptor.setDest(&measurements_projective_depth_01);
+    ASSERT_TRUE(adaptor.setRawData(message_01));
+    adaptor.setMeas(&measurements_projective_depth_01);
     adaptor.compute();
-    ASSERT_TRUE(adaptor.setMeasurement(message_50));
-    adaptor.setDest(&measurements_projective_depth_50);
+    ASSERT_TRUE(adaptor.setRawData(message_50));
+    adaptor.setMeas(&measurements_projective_depth_50);
     adaptor.compute();
 
     // ds unproject points (sparse)
@@ -660,7 +666,9 @@ protected:
     correspondences_camera_01_from_00.clear();
     correspondences_camera_01_from_00.reserve(points_in_camera_00.size());
     PointIntensityDescriptor3fVectorCloud points_01_from_00(points_in_camera_00);
-    points_01_from_00.transformInPlace(camera_01_from_00);
+    //  was ->  points_01_from_00.transformInPlace(camera_01_in_00);
+    points_01_from_00.transformInPlace(camera_01_in_00.inverse());
+    // srrg ----- end
     std::set<int> added_indices;
     for (size_t index_00 = 0; index_00 < points_01_from_00.size(); ++index_00) {
       const PointIntensityDescriptor3f& point_00 = points_01_from_00[index_00];
@@ -737,8 +745,8 @@ protected:
 
     // ds upcast and set measurements to adaptor TODO remove smart pointer passing by reference
     MessagePackPtr intensity_depth_message(new MessagePack());
-    ImageMessagePtr message_intensity(new ImageMessage("/intensity", "0", 0, 0.0));
-    ImageMessagePtr message_depth(new ImageMessage("/depth", "0", 0, 0.0));
+    ImageMessagePtr message_intensity(new ImageMessage("/camera/rgb/image_color", "0", 0, 0.0));
+    ImageMessagePtr message_depth(new ImageMessage("/camera/depth/image", "0", 0, 0.0));
     message_intensity->setImage(image_intensity_);
     message_depth->setImage(image_depth_);
     intensity_depth_message->messages = {message_intensity, message_depth};
@@ -780,9 +788,9 @@ protected:
   PointIntensityDescriptor3fVectorCloud points_in_camera_00_dense;
 
   // ds motion
-  Isometry3f camera_01_from_00;
-  Isometry3f camera_50_from_01;
-  Isometry3f camera_50_from_00;
+  Isometry3f camera_01_in_00;
+  Isometry3f camera_50_in_01;
+  Isometry3f camera_50_in_00;
 };
 
 class KITTI : public ::testing::Test {
@@ -800,12 +808,12 @@ protected:
 
     // ds set rigid stereo camera calibration
     camera_calibration_matrix << 718.856, 0, 607.193, 0, 718.856, 185.216, 0, 0, 1;
-    baseline_left_to_right_pixels << -386.1448, 0, 0;
+    baseline_right_in_left_pixels << 386.1448, 0, 0;
 
     // srrg set the platform
     //   create a TFEvent and push it to the platform
     Isometry3f tf_right_in_left = Isometry3f::Identity();
-    tf_right_in_left.translation() << -0.537166, 0, 0;
+    tf_right_in_left.translation() << 0.537166, 0, 0;
     TransformEventPtr tf_event(
       new TransformEvent(0, "camera_right", tf_right_in_left, "camera_left"));
     _platform.reset(new Platform);
@@ -821,7 +829,7 @@ protected:
     projector->param_range_max.setValue(1000.0f);
 
     // ds allocate adaptor and merger
-    adaptor = MeasurementAdaptorStereoProjectivePtr(new MeasurementAdaptorStereoProjective());
+    adaptor = RawDataPreprocessorStereoProjectivePtr(new RawDataPreprocessorStereoProjective());
     ASSERT_NOTNULL(adaptor->param_correspondence_finder.value());
     adaptor->param_correspondence_finder->param_maximum_descriptor_distance.setValue(50);
     adaptor->param_correspondence_finder->param_maximum_distance_ratio_to_second_best.setValue(0.8);
@@ -893,11 +901,15 @@ protected:
     camera_04_in_world.translation() << -1.874858e-01, -1.135202e-01, 3.432648e+00;
     camera_04_in_world.linear() << 9.999637e-01, 2.078471e-03, -8.263498e-03, -2.116664e-03,
       9.999871e-01, -4.615826e-03, 8.253797e-03, 4.633149e-03, 9.999551e-01;
-    camera_01_from_00 = camera_01_in_world.inverse() * camera_00_in_world;
-    camera_02_from_00 = camera_02_in_world.inverse() * camera_00_in_world;
-    camera_03_from_00 = camera_03_in_world.inverse() * camera_00_in_world;
-    camera_04_from_00 = camera_04_in_world.inverse() * camera_00_in_world;
-    camera_02_from_01 = camera_02_in_world.inverse() * camera_01_in_world;
+
+    Isometry3f world_in_camera_00 = camera_00_in_world.inverse();
+    Isometry3f world_in_camera_01 = camera_01_in_world.inverse();
+
+    camera_01_in_00 = world_in_camera_00 * camera_01_in_world;
+    camera_02_in_00 = world_in_camera_00 * camera_02_in_world;
+    camera_03_in_00 = world_in_camera_00 * camera_03_in_world;
+    camera_04_in_00 = world_in_camera_00 * camera_04_in_world;
+    camera_02_in_01 = world_in_camera_01 * camera_02_in_world;
 
     // ds sequence 01
     Isometry3f camera_274_in_world;
@@ -908,11 +920,12 @@ protected:
     camera_275_in_world.translation() << 4.970247e+02, 5.116707e+00, -2.241389e+02;
     camera_275_in_world.linear() << -6.339828e-01, -2.092726e-02, 7.730640e-01, 2.586268e-02,
       9.985009e-01, 4.823971e-02, -7.729146e-01, 5.057664e-02, -6.324911e-01;
-    highway_camera_275_from_274 = camera_275_in_world.inverse() * camera_274_in_world;
+
+    highway_camera_275_in_274 = camera_274_in_world.inverse() * camera_275_in_world;
 
     // ds adapt measurements
-    ASSERT_TRUE(adaptor->setMeasurement(messages[0]));
-    adaptor->setDest(&measurements[0]);
+    ASSERT_TRUE(adaptor->setRawData(messages[0]));
+    adaptor->setMeas(&measurements[0]);
     adaptor->compute();
     points_00_in_image_00.reserve(measurements[0].size());
     for (const PointIntensityDescriptor4f& measurement : measurements[0]) {
@@ -931,7 +944,7 @@ protected:
     ASSERT_EQ(points_in_camera_00.size(), measurements[0].size());
 
     // ds project points in camera 01
-    projector->setCameraPose(camera_01_from_00.inverse());
+    projector->setCameraPose(camera_01_in_00);
     std::vector<int> indices_projected_01_to_camera_00;
     projector->compute(points_in_camera_00,
                        points_00_in_camera_01,
@@ -939,8 +952,8 @@ protected:
                        indices_projected_01_to_camera_00);
 
     // ds adapt measurements
-    ASSERT_TRUE(adaptor->setMeasurement(messages[1]));
-    adaptor->setDest(&measurements[1]);
+    ASSERT_TRUE(adaptor->setRawData(messages[1]));
+    adaptor->setMeas(&measurements[1]);
     adaptor->setProjections(&points_00_in_image_01, 0);
     adaptor->compute();
 
@@ -952,7 +965,7 @@ protected:
     ASSERT_EQ(points_in_camera_01.size(), measurements[1].size());
 
     // ds project points in camera 02
-    projector->setCameraPose(camera_02_from_00.inverse());
+    projector->setCameraPose(camera_02_in_00);
     std::vector<int> indices_projected_02_to_camera_00;
     projector->compute(points_in_camera_00,
                        points_00_in_camera_02,
@@ -960,8 +973,8 @@ protected:
                        indices_projected_02_to_camera_00);
 
     // ds adapt measurements
-    ASSERT_TRUE(adaptor->setMeasurement(messages[2]));
-    adaptor->setDest(&measurements[2]);
+    ASSERT_TRUE(adaptor->setRawData(messages[2]));
+    adaptor->setMeas(&measurements[2]);
     adaptor->setProjections(&points_00_in_image_02, 0);
     adaptor->compute();
 
@@ -1022,16 +1035,16 @@ protected:
     }
 
     // ds adapt highway measurements
-    ASSERT_TRUE(adaptor->setMeasurement(highway_messages[0]));
-    adaptor->setDest(&highway_measurements[0]);
+    ASSERT_TRUE(adaptor->setRawData(highway_messages[0]));
+    adaptor->setMeas(&highway_measurements[0]);
     adaptor->compute();
     merger.param_triangulator->setDest(&highway_points_in_camera_274);
     merger.param_triangulator->setMoving(&highway_measurements[0]);
     merger.param_triangulator->compute();
     ASSERT_EQ(merger.param_triangulator->indicesInvalidated().size(), 0);
     ASSERT_EQ(highway_points_in_camera_274.size(), highway_measurements[0].size());
-    ASSERT_TRUE(adaptor->setMeasurement(highway_messages[1]));
-    adaptor->setDest(&highway_measurements[1]);
+    ASSERT_TRUE(adaptor->setRawData(highway_messages[1]));
+    adaptor->setMeas(&highway_measurements[1]);
     adaptor->compute();
     merger.param_triangulator->setDest(&highway_points_in_camera_275);
     merger.param_triangulator->setMoving(&highway_measurements[1]);
@@ -1061,8 +1074,8 @@ protected:
 
     // ds upcast and set measurements to adaptor TODO remove smart pointer passing by reference
     MessagePackPtr stereo_message(new MessagePack());
-    ImageMessagePtr image_message_left(new ImageMessage("/left", "0", 0, 0.0));
-    ImageMessagePtr image_message_right(new ImageMessage("/right", "0", 0, 0.0));
+    ImageMessagePtr image_message_left(new ImageMessage("/camera_left/image_raw", "0", 0, 0.0));
+    ImageMessagePtr image_message_right(new ImageMessage("/camera_right/image_raw", "0", 0, 0.0));
     image_left_ = new ImageUInt8();
     image_left_->fromCv(image_intensity_left_opencv);
     image_message_left->setImage(image_left_);
@@ -1081,13 +1094,13 @@ protected:
   const size_t image_cols              = 1241;
   const int detector_threshold         = 15;
   Matrix3f camera_calibration_matrix;
-  Vector3f baseline_left_to_right_pixels;
+  Vector3f baseline_right_in_left_pixels;
 
   // ds pinhole point projector
   PointIntensityDescriptor3fProjectorPinholePtr projector = nullptr;
 
   // ds stereo adaptor
-  MeasurementAdaptorStereoProjectivePtr adaptor = nullptr;
+  RawDataPreprocessorStereoProjectivePtr adaptor = nullptr;
 
   PlatformPtr _platform = nullptr;
 
@@ -1120,11 +1133,11 @@ public:
   PointIntensityDescriptor3fVectorCloud points_00_in_image_02;
 
   // ds motion
-  Isometry3f camera_01_from_00;
-  Isometry3f camera_02_from_00;
-  Isometry3f camera_03_from_00;
-  Isometry3f camera_04_from_00;
-  Isometry3f camera_02_from_01;
+  Isometry3f camera_01_in_00;
+  Isometry3f camera_02_in_00;
+  Isometry3f camera_03_in_00;
+  Isometry3f camera_04_in_00;
+  Isometry3f camera_02_in_01;
 
   // ds sequence 01 - TODO refactor UASSSS
   std::vector<BaseSensorMessagePtr> highway_messages;
@@ -1135,5 +1148,5 @@ public:
     highway_measurements;
   PointIntensityDescriptor3fVectorCloud highway_points_in_camera_274;
   PointIntensityDescriptor3fVectorCloud highway_points_in_camera_275;
-  Isometry3f highway_camera_275_from_274;
+  Isometry3f highway_camera_275_in_274;
 };

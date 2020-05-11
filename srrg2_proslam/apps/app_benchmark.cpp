@@ -1,14 +1,14 @@
 #include <map>
 #include <unordered_map>
 
+#include <srrg2_slam_interfaces/instances.h>
 #include <srrg_config/configurable_manager.h>
 #include <srrg_messages/instances.h>
 #include <srrg_pcl/instances.h>
-#include <srrg_slam_interfaces/instances.h>
 #include <srrg_system_utils/parse_command_line.h>
 #include <srrg_system_utils/shell_colors.h>
 
-#include "srrg2_proslam_tracking/instances.h"
+#include "srrg2_proslam/tracking/instances.h"
 
 using namespace srrg2_core;
 using namespace srrg2_slam_interfaces;
@@ -17,6 +17,8 @@ using namespace srrg2_proslam;
 const std::string exe_name("app_benchmark");
 #define LOG std::cerr << exe_name + "|"
 
+void retrievePlatformSource(std::shared_ptr<MultiGraphSLAM3D> sink,
+                            std::shared_ptr<MessageSynchronizedSource> source);
 class SLAMBenchmark : public MultiGraphSLAM3D {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -57,12 +59,12 @@ public:
       std::cerr << "SLAMBenchmark::benchmarkCompute|initializing" << std::endl;
 
       // ds set shared platform if needed TODO rework this
-      if (!_platform) {
+      if (!platform()) {
         ThisType::setPlatform(PlatformPtr(new Platform()));
       }
 
       // ds run initializer
-      initializer->setMeasurement(_measurement);
+      initializer->setRawData(_message);
       initializer->initialize();
 
       // ds skip processing if insufficient data is available for initialization
@@ -85,19 +87,19 @@ public:
     if (!splitting_criterion) {
       throw std::runtime_error("SLAMBenchmark::benchmarkCompute|splitting criterion not set");
     }
-    splitting_criterion->setSlamAlgorithm(this);
+    splitting_criterion->setSLAMAlgorithm(this);
     tracker->setPlatform(this->_platform);
 
     if (!_current_local_map) {
       std::cerr << "SLAMBenchmark::benchmarkCompute|creating first map!" << std::endl;
       makeNewMap();
       tracker->setScene(&_current_local_map->dynamic_properties);
-      tracker->setEstimate(_robot_pose_in_local_map);
+      tracker->setRobotInLocalMap(_robot_in_local_map);
     }
 
     // global pose
-    tracker->setMeasurement(_measurement);
-    tracker->adaptMeasurements();
+    tracker->setRawData(_message);
+    tracker->preprocessRawData();
     tracker->align(); // ia I really do not like this name
 
     // ia BENCHMARKING STUFF
@@ -115,7 +117,7 @@ public:
       }
 
       _full_trajectory.at(_current_local_map)
-        .push_back(StampedIsometry3f(_current_ts, tracker->estimate()));
+        .push_back(StampedIsometry3f(_current_ts, tracker->robotInLocalMap()));
     }
 
     switch (tracker->status()) {
@@ -126,12 +128,12 @@ public:
         std::cerr << FG_YELLOW("SLAMBenchmark::benchmarkCompute|ready to go!") << std::endl;
         break;
       case TrackerBase::Tracking: {
-        _robot_pose_in_local_map = tracker->estimate();
+        _robot_in_local_map = tracker->robotInLocalMap();
         splitting_criterion->compute();
         if (!splitting_criterion->hasToSplit()) {
           break;
         }
-        GraphItemPtrSet_<LoopClosurePtrType> relocalize_closures;
+        GraphItemPtrSet_<LoopClosureTypePtr> relocalize_closures;
         loopDetect();
         loopValidate(relocalize_closures);
         optimize();
@@ -149,13 +151,13 @@ public:
           // ds it is fine if the correspondences are destroyed by scope after the merge
           tracker->setClosure(_relocalized_closure->correspondences,
                               _relocalized_closure->measurement().inverse(),
-                              _robot_pose_in_local_map);
+                              _robot_in_local_map);
 
           // ds reset closure buffer for next iteration (potentially without relocalization)
           _relocalized_closure = nullptr;
         }
         tracker->setScene(&_current_local_map->dynamic_properties);
-        tracker->setEstimate(_robot_pose_in_local_map); // ds estimate is set to I after makeNewMap
+        tracker->setRobotInLocalMap(_robot_in_local_map);
         break;
       }
       case TrackerBase::Lost:
@@ -177,7 +179,7 @@ public:
 
     // ds set global pose of current tracker scene to the tracker
     // ds this information will be used for global landmark updates in the merge phase
-    tracker->setSceneInWorld(_current_local_map->estimate().inverse());
+    tracker->setLocalMapInWorld(_current_local_map->estimate());
     tracker->merge();
     ++_number_of_processed_measurements;
   }
@@ -185,7 +187,7 @@ public:
   // ia the only one overridable is this one :)
   bool putMessage(BaseSensorMessagePtr measurement_) override {
     _current_ts = measurement_->timestamp.value();
-    BaseType::setMeasurement(measurement_);
+    BaseType::setRawData(measurement_);
     ThisType::benchmarkCompute();
     return true;
   }
@@ -259,11 +261,11 @@ protected:
     }
   }
 };
-
+bool requires_platform = false;
 int main(int argc, char** argv) {
   srrg2_core::point_cloud_registerTypes();
   srrg2_core::messages_registerTypes();
-  srrg2_slam_interfaces::slam_interfaces_registerTypes();
+  srrg2_slam_interfaces::srrg2_slam_interfaces_registerTypes();
   srrg2_proslam::srrg2_proslam_tracking_registerTypes();
 
   ParseCommandLine cmd(argv);
@@ -322,7 +324,16 @@ int main(int argc, char** argv) {
   // ia start processing the thing
   LOG << "start processing\n";
   BaseSensorMessagePtr msg = nullptr;
+
+  requires_platform = (std::dynamic_pointer_cast<MessagePlatformSink>(slammer_ptr) != 0);
   while ((msg = sync_ptr->getMessage())) {
+    if (requires_platform) {
+      retrievePlatformSource(slammer_ptr, sync_ptr);
+      if (slammer_ptr->platform()) {
+        benchamin.setPlatform(slammer_ptr->platform());
+        requires_platform = false;
+      }
+    }
     benchamin.putMessage(msg);
   }
 
@@ -347,4 +358,30 @@ int main(int argc, char** argv) {
   // }
 
   return 0;
+}
+
+void retrievePlatformSource(std::shared_ptr<MultiGraphSLAM3D> sink,
+                            std::shared_ptr<MessageSynchronizedSource> source) {
+  MessagePlatformSinkPtr platform_sink = std::dynamic_pointer_cast<MessagePlatformSink>(sink);
+  MessageSourcePlatformPtr platform_source;
+
+  std::shared_ptr<MessageFilterBase> s = std::dynamic_pointer_cast<MessageFilterBase>(source);
+  while (s) {
+    platform_source = std::dynamic_pointer_cast<MessageSourcePlatform>(s);
+    if (platform_source) {
+      PlatformPtr platform = platform_source->platform(platform_sink->param_tf_topic.value());
+      if (platform && platform->isWellFormed()) {
+        platform_sink->setPlatform(platform);
+        std::cerr << "CommandRunRunner::retrievePlatformSource|"
+                  << FG_GREEN("platform assigned:\n"
+                              << platform_sink->platform())
+                  << std::endl;
+        requires_platform = false;
+      }
+      return;
+    }
+    std::shared_ptr<MessageFilterBase> next =
+      std::dynamic_pointer_cast<MessageFilterBase>(s->param_source.value());
+    s = next;
+  }
 }

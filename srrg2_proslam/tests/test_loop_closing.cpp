@@ -125,7 +125,7 @@ TEST_F(KITTI, MultiLoopDetectorHBST3D_FASTORB00To01) {
   const LoopClosure3DPtr closure = loop_detector->detectedClosures().back();
   ASSERT_EQ(closure->correspondences.size(), closure->num_correspondences);
   ASSERT_EQ(closure->num_correspondences, 45);
-  const Vector6f error = geometry3d::t2tnq(closure->measurement().inverse() * camera_01_from_00);
+  const Vector6f error = geometry3d::t2tnq(closure->measurement() * camera_01_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.2);
   ASSERT_LT_ABS(error(1), 0.2);
@@ -188,7 +188,7 @@ TEST_F(ICL, MultiLoopDetectorHBST3D_FASTORB00To01) {
   const LoopClosure3DPtr closure = loop_detector->detectedClosures().back();
   ASSERT_EQ(closure->correspondences.size(), closure->num_correspondences);
   ASSERT_EQ(closure->num_correspondences, 206);
-  const Vector6f error = geometry3d::t2tnq(closure->measurement().inverse() * camera_01_from_00);
+  const Vector6f error = geometry3d::t2tnq(closure->measurement() * camera_01_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.05);
   ASSERT_LT_ABS(error(1), 0.05);
@@ -262,8 +262,7 @@ TEST_F(ICL, MultiLoopDetectorHBST3D_FASTORB00To01And50) {
   ASSERT_EQ(closure_0050->target()->graphId(), 0);
   ASSERT_EQ(closure_0050->correspondences.size(), closure_0050->num_correspondences);
   ASSERT_EQ(closure_0050->num_correspondences, 139);
-  const Vector6f error_0050 =
-    geometry3d::t2tnq(closure_0050->measurement().inverse() * camera_50_from_00);
+  const Vector6f error_0050 = geometry3d::t2tnq(closure_0050->measurement() * camera_50_in_00);
   ASSERT_LT_ABS(error_0050(0), 0.1);
   ASSERT_LT_ABS(error_0050(1), 0.1);
   ASSERT_LT_ABS(error_0050(2), 0.1);
@@ -275,8 +274,7 @@ TEST_F(ICL, MultiLoopDetectorHBST3D_FASTORB00To01And50) {
   ASSERT_EQ(closure_0150->target()->graphId(), 1);
   ASSERT_EQ(closure_0150->correspondences.size(), closure_0150->num_correspondences);
   ASSERT_EQ(closure_0150->num_correspondences, 141);
-  const Vector6f error_0051 =
-    geometry3d::t2tnq(closure_0150->measurement().inverse() * camera_50_from_01);
+  const Vector6f error_0051 = geometry3d::t2tnq(closure_0150->measurement() * camera_50_in_01);
   ASSERT_LT_ABS(error_0051(0), 0.1);
   ASSERT_LT_ABS(error_0051(1), 0.1);
   ASSERT_LT_ABS(error_0051(2), 0.1);

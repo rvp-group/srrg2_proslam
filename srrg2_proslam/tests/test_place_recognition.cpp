@@ -24,7 +24,7 @@ TEST_F(KITTI, MultiLoopDetectorHBST3D_FASTORB00To00) {
   loop_detector.param_maximum_descriptor_distance.setValue(1);
   loop_detector.param_minimum_age_difference_to_candidates.setValue(0);
   MultiAligner3DQRPtr loop_aligner(new MultiAligner3DQR());
-  AlignerSlice3DPtr aligner_slice(new AlignerSlice3D());
+  AlignerSliceProcessor3DPtr aligner_slice(new AlignerSliceProcessor3D());
   aligner_slice->param_fixed_slice_name.setValue("points");
   aligner_slice->param_moving_slice_name.setValue("points");
   loop_aligner->param_slice_processors.pushBack(aligner_slice);
@@ -83,7 +83,7 @@ TEST_F(KITTI, MultiLoopDetectorHBST2D_FASTORB00To00) {
   loop_detector.param_maximum_descriptor_distance.setValue(1);
   loop_detector.param_minimum_age_difference_to_candidates.setValue(0);
   MultiAligner2DPtr loop_aligner(new MultiAligner2D());
-  AlignerSlice2DPtr aligner_slice(new AlignerSlice2D());
+  AlignerSliceProcessor2DPtr aligner_slice(new AlignerSliceProcessor2D());
   aligner_slice->param_fixed_slice_name.setValue("points");
   aligner_slice->param_moving_slice_name.setValue("points");
   loop_aligner->param_slice_processors.pushBack(aligner_slice);
@@ -146,7 +146,7 @@ TEST_F(KITTI, MultiLoopDetectorHBST2D_FASTORB00To01) {
   loop_detector.param_maximum_descriptor_distance.setValue(25);
   loop_detector.param_minimum_age_difference_to_candidates.setValue(0);
   MultiAligner2DPtr loop_aligner(new MultiAligner2D());
-  AlignerSlice2DPtr aligner_slice(new AlignerSlice2D());
+  AlignerSliceProcessor2DPtr aligner_slice(new AlignerSliceProcessor2D());
   aligner_slice->param_fixed_slice_name.setValue("points");
   aligner_slice->param_moving_slice_name.setValue("points");
   loop_aligner->param_slice_processors.pushBack(aligner_slice);
@@ -208,7 +208,7 @@ TEST_F(ICL, MultiLoopDetectorHBST2D_FASTORB00To50) {
   loop_detector.param_maximum_descriptor_distance.setValue(25);
   loop_detector.param_minimum_age_difference_to_candidates.setValue(0);
   MultiAligner2DPtr loop_aligner(new MultiAligner2D());
-  AlignerSlice2DPtr aligner_slice(new AlignerSlice2D());
+  AlignerSliceProcessor2DPtr aligner_slice(new AlignerSliceProcessor2D());
   aligner_slice->param_fixed_slice_name.setValue("points");
   aligner_slice->param_moving_slice_name.setValue("points");
   loop_aligner->param_slice_processors.pushBack(aligner_slice);
@@ -253,7 +253,7 @@ TEST_F(ICL, MultiLoopDetectorHBST3D_FASTORB00To01) {
   loop_detector.param_maximum_descriptor_distance.setValue(50);
   loop_detector.param_minimum_age_difference_to_candidates.setValue(0);
   MultiAligner3DQRPtr loop_aligner(new MultiAligner3DQR());
-  AlignerSlice3DPtr aligner_slice(new AlignerSlice3D());
+  AlignerSliceProcessor3DPtr aligner_slice(new AlignerSliceProcessor3D());
   aligner_slice->param_fixed_slice_name.setValue("points");
   aligner_slice->param_moving_slice_name.setValue("points");
   loop_aligner->param_slice_processors.pushBack(aligner_slice);
@@ -307,7 +307,7 @@ TEST_F(KITTI, MultiLoopDetectorHBST3D_FASTORB00To01) {
   loop_detector.param_maximum_descriptor_distance.setValue(50);
   loop_detector.param_minimum_age_difference_to_candidates.setValue(0);
   MultiAligner3DQRPtr loop_aligner(new MultiAligner3DQR());
-  AlignerSlice3DPtr aligner_slice(new AlignerSlice3D());
+  AlignerSliceProcessor3DPtr aligner_slice(new AlignerSliceProcessor3D());
   aligner_slice->param_fixed_slice_name.setValue("points");
   aligner_slice->param_moving_slice_name.setValue("points");
   loop_aligner->param_slice_processors.pushBack(aligner_slice);

@@ -13,13 +13,13 @@ TEST_F(ICL, SceneClipperProjective3D_DenseMonocularDepthNoMotion) {
   clipper.param_projector->param_range_min.setValue(0.1);
 
   // ds result buffer
-  PointIntensityDescriptor3fVectorCloud points_visible;
+  PointIntensityDescriptor3fVectorCloud points_visible_in_robot;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00_dense);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00_dense);
+  clipper.setClippedSceneInRobot(&points_visible_in_robot);
 
   // ds compute visible points
   clipper.compute();
@@ -30,10 +30,10 @@ TEST_F(ICL, SceneClipperProjective3D_DenseMonocularDepthNoMotion) {
   // ds we did not move, all the points must be still visible
   // ds some points might be lost due to numerical imprecision
   // ds TODO for some reason(s) we get lower point counts on ubuntu1604_kinetic_release
-  ASSERT_LE(points_visible.size(), 306671);
-  for (size_t index = 0; index < points_visible.size(); ++index) {
+  ASSERT_LE(points_visible_in_robot.size(), 306671);
+  for (size_t index = 0; index < points_visible_in_robot.size(); ++index) {
     // ds points should still lie ahead of the camera
-    ASSERT_GT(points_visible[index].coordinates()(2), 0);
+    ASSERT_GT(points_visible_in_robot[index].coordinates()(2), 0);
   }
 }
 
@@ -49,11 +49,11 @@ TEST_F(ICL, SceneClipperProjective3D_DenseMonocularDepthRotateFullPitch) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.rotate(AngleAxisf(M_PI, Vector3f::UnitZ()));
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00_dense);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.rotate(AngleAxisf(M_PI, Vector3f::UnitZ()));
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00_dense);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -83,11 +83,11 @@ TEST_F(ICL, SceneClipperProjective3D_DenseMonocularDepthRotateFullRoll) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.rotate(AngleAxisf(M_PI, Vector3f::UnitX()));
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00_dense);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.rotate(AngleAxisf(M_PI, Vector3f::UnitX()));
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00_dense);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -111,11 +111,11 @@ TEST_F(ICL, SceneClipperProjective3D_DenseMonocularDepthRotateQuarterRoll) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.rotate(AngleAxisf(M_PI / 4, Vector3f::UnitX()));
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00_dense);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.rotate(AngleAxisf(M_PI / 4, Vector3f::UnitX()));
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00_dense);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -139,11 +139,11 @@ TEST_F(ICL, SceneClipperProjective3D_DenseMonocularDepthTranslateBackward) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.translation().z() = -1.0;
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00_dense);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.translation().z() = -1.0;
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00_dense);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -167,11 +167,11 @@ TEST_F(ICL, SceneClipperProjective3D_DenseMonocularDepthTranslateForward) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.translation().z() = 1.0;
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00_dense);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.translation().z() = 1.0;
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00_dense);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -195,10 +195,10 @@ TEST_F(ICL, SceneClipperProjective3D_SparseMonocularDepthNoMotion) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -230,11 +230,11 @@ TEST_F(ICL, SceneClipperProjective3D_SparseMonocularDepthRotateFullPitch) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.rotate(AngleAxisf(M_PI, Vector3f::UnitZ()));
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.rotate(AngleAxisf(M_PI, Vector3f::UnitZ()));
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -266,11 +266,11 @@ TEST_F(ICL, SceneClipperProjective3D_SparseMonocularDepthRotateFullRoll) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.rotate(AngleAxisf(M_PI, Vector3f::UnitX()));
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.rotate(AngleAxisf(M_PI, Vector3f::UnitX()));
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -294,11 +294,11 @@ TEST_F(ICL, SceneClipperProjective3D_SparseMonocularDepthRotateQuarterRoll) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.rotate(AngleAxisf(M_PI / 4, Vector3f::UnitX()));
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.rotate(AngleAxisf(M_PI / 4, Vector3f::UnitX()));
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -330,11 +330,11 @@ TEST_F(ICL, SceneClipperProjective3D_SparseMonocularDepthTranslateBackward) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.translation().z() = -1.0;
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.translation().z() = -1.0;
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -366,11 +366,11 @@ TEST_F(ICL, SceneClipperProjective3D_SparseMonocularDepthTranslateForward) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.translation().z() = 1.0;
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.translation().z() = 1.0;
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -402,10 +402,10 @@ TEST_F(KITTI, SceneClipperProjective3D_SparseNoMotion) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();
@@ -437,11 +437,11 @@ TEST_F(KITTI, SceneClipperProjective3D_SparseTranslateForward) {
   PointIntensityDescriptor3fVectorCloud points_visible;
 
   // ds set buffers to processor
-  Isometry3f world_in_camera(Isometry3f::Identity());
-  world_in_camera.translation().z() = 10.0;
-  clipper.setTransform(world_in_camera);
-  clipper.setGlobalScene(&points_in_camera_00);
-  clipper.setLocalScene(&points_visible);
+  Isometry3f robot_in_local_map(Isometry3f::Identity());
+  robot_in_local_map.translation().z() = 10.0;
+  clipper.setRobotInLocalMap(robot_in_local_map);
+  clipper.setFullScene(&points_in_camera_00);
+  clipper.setClippedSceneInRobot(&points_visible);
 
   // ds compute visible points
   clipper.compute();

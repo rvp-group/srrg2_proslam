@@ -1,6 +1,8 @@
 #include "fixtures.hpp"
-#include "srrg2_proslam_mapping/landmarks/filters/projective_depth_point_ekf.h"
-#include "srrg2_proslam_mapping/landmarks/filters/stereo_projective_point_ekf.h"
+#include "srrg2_proslam/mapping/landmarks/filters/projective_depth_point_ekf.h"
+#include "srrg2_proslam/mapping/landmarks/filters/stereo_projective_point_ekf.h"
+
+#include "srrg2_proslam/mapping/instances.cpp"
 
 // ds sampling configuration for synthetic tests
 constexpr size_t number_of_runs        = 100;
@@ -29,7 +31,7 @@ TEST_F(SyntheticDouble, StereoProjectivePointEKF_Translations_ZeroNoise) {
 
     // ds process all samples
     for (size_t j = 0; j < number_of_transitions; ++j) {
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(stereo_point_projections_noisy[j + 1]);
       filter.compute();
 
@@ -61,7 +63,7 @@ TEST_F(SyntheticDouble, StereoProjectivePointEKF_Rotations_ZeroNoise) {
 
     // ds process all samples
     for (size_t j = 0; j < number_of_transitions; ++j) {
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(stereo_point_projections_noisy[j + 1]);
       filter.compute();
 
@@ -93,7 +95,7 @@ TEST_F(SyntheticDouble, StereoProjectivePointEKF_Transforms_ZeroNoise) {
 
     // ds process all samples
     for (size_t j = 0; j < number_of_transitions; ++j) {
-      filter.setTransition(camera_transitions_noisy[j]);
+      filter.setWorldInSensor(camera_transitions_noisy[j]);
       filter.setMeasurement(stereo_point_projections_noisy[j + 1]);
       filter.compute();
 
@@ -150,18 +152,18 @@ TEST_F(SyntheticDouble, StereoProjectivePointEKF_Transforms_FullNoise) {
       measurement_covariance_bino *= 10.0 /*generous noise estimate*/;
 
       // ds propagate monocular filter
-      filter_mono.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter_mono.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter_mono.setMeasurement(point_projections_noisy[j + 1], measurement_covariance_mono);
       filter_mono.compute();
 
       // ds propagate monocular filter with depth
-      filter_mono_depth.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter_mono_depth.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter_mono_depth.setMeasurement(point_projections_depth_noisy[j + 1],
                                        measurement_covariance_mono_depth);
       filter_mono_depth.compute();
 
       // ds propagate binocular filter
-      filter_bino.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter_bino.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter_bino.setMeasurement(stereo_point_projections_noisy[j + 1],
                                  measurement_covariance_bino);
       filter_bino.compute();

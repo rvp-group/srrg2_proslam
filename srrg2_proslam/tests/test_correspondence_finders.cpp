@@ -311,7 +311,7 @@ TEST_F(ICL, 00To00_CorrespondenceFinder_ProjectiveKDTree_IdentityEstimate) {
   correspondence_finder.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide pose estimate
-  correspondence_finder.setEstimate(Isometry3f::Identity());
+  correspondence_finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds extract features
   PointIntensityDescriptor2fVectorCloud features_00;
@@ -351,7 +351,7 @@ TEST_F(ICL, 00To50_CorrespondenceFinder_ProjectiveKDTree_PerfectEstimate) {
   correspondence_finder.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide accuracte pose estimate
-  correspondence_finder.setEstimate(camera_50_from_00);
+  correspondence_finder.setLocalMapInSensor(camera_50_in_00.inverse());
 
   // ds extract features
   PointIntensityDescriptor2fVectorCloud features_50;
@@ -390,7 +390,7 @@ TEST_F(ICL, 00To50_CorrespondenceFinder_ProjectiveKDTree_IdentityEstimate) {
   correspondence_finder.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide pose estimate
-  correspondence_finder.setEstimate(Isometry3f::Identity());
+  correspondence_finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds extract features
   PointIntensityDescriptor2fVectorCloud features_50;
@@ -447,7 +447,7 @@ TEST_F(KITTI, 00To01_ProjectiveKDTree_PerfectEstimate) {
   correspondence_finder.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide accuracte pose estimate
-  correspondence_finder.setEstimate(camera_01_from_00);
+  correspondence_finder.setLocalMapInSensor(camera_01_in_00.inverse());
 
   // ds extract features
   PointIntensityDescriptor3fVectorCloud features_01;
@@ -488,7 +488,7 @@ TEST_F(KITTI, 00To01_ProjectiveBF_PerfectEstimate) {
   correspondence_finder.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide accuracte pose estimate
-  correspondence_finder.setEstimate(camera_01_from_00);
+  correspondence_finder.setLocalMapInSensor(camera_01_in_00.inverse());
 
   // ds extract features
   PointIntensityDescriptor3fVectorCloud features_01;
@@ -527,7 +527,7 @@ TEST_F(KITTI, 00To01_ProjectiveKDTree_IdentityEstimate) {
   correspondence_finder.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide pose estimate
-  correspondence_finder.setEstimate(Isometry3f::Identity());
+  correspondence_finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds narrow search radius
   correspondence_finder.param_maximum_search_radius_pixels.setValue(10);
@@ -588,7 +588,7 @@ TEST_F(KITTI, 00To02_ProjectiveKDTree_PerfectEstimate) {
   correspondence_finder.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide accuracte pose estimate
-  correspondence_finder.setEstimate(camera_02_from_00);
+  correspondence_finder.setLocalMapInSensor(camera_02_in_00.inverse());
 
   // ds extract features
   PointIntensityDescriptor3fVectorCloud features_02;
@@ -630,8 +630,8 @@ TEST_F(KITTI, BruteforceVersusProjectiveBruteforce) {
   cf_projective.param_projector->setCameraMatrix(camera_calibration_matrix);
 
   // ds provide accuracte pose estimate (no effect for BF)
-  cf_bruteforce.setEstimate(camera_01_from_00);
-  cf_projective.setEstimate(camera_01_from_00);
+  cf_bruteforce.setLocalMapInSensor(camera_01_in_00.inverse());
+  cf_projective.setLocalMapInSensor(camera_01_in_00.inverse());
 
   // ds match features with bruteforce
   CorrespondenceVector correspondences_bruteforce;
@@ -695,7 +695,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, Bruteforce_NoMotionNoNoise) {
   finder.param_maximum_distance_ratio_to_second_best.setValue(0.5);
 
   // ds set sensor poses
-  finder.setEstimate(Isometry3f::Identity());
+  finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds generate uniform scenario
   constexpr size_t number_of_points = 100;
@@ -754,7 +754,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, ProjectiveKDTree_NoMotionNoNoise) {
   finder.param_projector->setCameraMatrix(projection_matrix);
 
   // ds set sensor poses
-  finder.setEstimate(Isometry3f::Identity());
+  finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds generate uniform scenario
   constexpr size_t number_of_points = 100;
@@ -813,11 +813,11 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, ProjectiveKDTree_TranslationNoNoise) {
   finder.param_projector->setCameraMatrix(projection_matrix);
 
   // ds set sensor poses
-  Isometry3f pose(Isometry3f::Identity());
-  sensor_poses.push_back(pose);
-  pose.translation() += Vector3f(0, 0, -1);
-  sensor_poses.push_back(pose);
-  finder.setEstimate(pose /*perfect initial guess*/);
+  Isometry3f sensor_in_local_map(Isometry3f::Identity());
+  sensor_poses.push_back(sensor_in_local_map);
+  sensor_in_local_map.translation() += Vector3f(0, 0, -1);
+  sensor_poses.push_back(sensor_in_local_map);
+  finder.setLocalMapInSensor(sensor_in_local_map.inverse() /*perfect initial guess*/);
 
   // ds generate uniform scenario
   constexpr size_t number_of_points = 100;
@@ -857,7 +857,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, ProjectiveKDTree_TranslationNoNoise) {
       }
     }
   }
-  ASSERT_EQ(correspondences_canvas_1_to_sensor_0.size(), 98);
+  ASSERT_EQ(correspondences_canvas_1_to_sensor_0.size(), 95);
 
   // ds match features
   CorrespondenceVector correspondences;
@@ -896,11 +896,11 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, ProjectiveKDTree_RotationNoNoise) {
   finder.param_projector->setCameraMatrix(projection_matrix);
 
   // ds set sensor poses
-  Isometry3f pose(Isometry3f::Identity());
-  sensor_poses.push_back(pose);
-  pose.rotate(AngleAxisf(0.25 * M_PI, Vector3f::UnitX()));
-  sensor_poses.push_back(pose);
-  finder.setEstimate(pose /*perfect initial guess*/);
+  Isometry3f sensor_in_local_map(Isometry3f::Identity());
+  sensor_poses.push_back(sensor_in_local_map);
+  sensor_in_local_map.rotate(AngleAxisf(0.25 * -M_PI, Vector3f::UnitX()));
+  sensor_poses.push_back(sensor_in_local_map);
+  finder.setLocalMapInSensor(sensor_in_local_map.inverse() /*perfect initial guess*/);
 
   // ds generate uniform scenario
   constexpr size_t number_of_points = 100;
@@ -978,7 +978,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, ProjectiveSquare_NoMotionNoNoise) {
   finder.param_projector->setCameraMatrix(projection_matrix);
 
   // ds set sensor poses
-  finder.setEstimate(Isometry3f::Identity());
+  finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds generate uniform scenario
   constexpr size_t number_of_points = 100;
@@ -1037,7 +1037,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, ProjectiveCircle_NoMotionNoNoise) {
   finder.param_projector->setCameraMatrix(projection_matrix);
 
   // ds set sensor poses
-  finder.setEstimate(Isometry3f::Identity());
+  finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds generate uniform scenario
   constexpr size_t number_of_points = 100;
@@ -1096,7 +1096,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, ProjectiveRhombus_NoMotionNoNoise) {
   finder.param_projector->setCameraMatrix(projection_matrix);
 
   // ds set sensor poses
-  finder.setEstimate(Isometry3f::Identity());
+  finder.setLocalMapInSensor(Isometry3f::Identity());
 
   // ds generate uniform scenario
   constexpr size_t number_of_points = 100;

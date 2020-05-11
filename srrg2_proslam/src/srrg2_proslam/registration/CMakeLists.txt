@@ -1,0 +1,18 @@
+add_library(srrg2_proslam_registration_library SHARED
+  instances.cpp
+  aligner_slice_processor_projective.cpp
+  correspondence_finders/correspondence_finder_descriptor_based_bruteforce_impl.cpp
+  correspondence_finders/correspondence_finder_descriptor_based_epipolar_impl.cpp
+  correspondence_finders/correspondence_finder_projective_base_impl.cpp
+  correspondence_finders/correspondence_finder_projective_kdtree_impl.cpp
+  correspondence_finders/correspondence_finder_projective_square_impl.cpp
+  correspondence_finders/correspondence_finder_projective_circle_impl.cpp
+  correspondence_finders/correspondence_finder_projective_rhombus_impl.cpp
+)
+
+target_link_libraries(srrg2_proslam_registration_library
+  srrg2_proslam_sensor_processing_library
+  srrg2_solver_projective_library
+  srrg2_viewer_library
+  ${catkin_LIBRARIES}
+)

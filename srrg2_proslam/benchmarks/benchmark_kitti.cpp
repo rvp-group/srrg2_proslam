@@ -1,9 +1,9 @@
 #include <srrg_benchmark/slam_benchmark_suite_kitti.hpp>
 #include <srrg_pcl/instances.h>
-#include <srrg_slam_interfaces/instances.h>
+#include <srrg2_slam_interfaces/instances.h>
 #include <srrg_system_utils/parse_command_line.h>
 
-#include "srrg2_proslam_tracking/instances.h"
+#include "srrg2_proslam/tracking/instances.h"
 
 using namespace srrg2_core;
 using namespace srrg2_slam_interfaces;
@@ -63,11 +63,11 @@ int main(int argc_, char** argv_) {
   // ds TODO clearly this does not account for PGO/BA which happens retroactively
   while (BaseSensorMessagePtr message = benchamin->getMessage()) {
     const double system_time_start_seconds = getTime();
-    slammer->setMeasurement(message);
+    slammer->setRawData(message);
     slammer->compute();
     const double processing_duration_seconds = getTime() - system_time_start_seconds;
     benchamin->setPoseEstimate(
-      slammer->robotPose(), message->timestamp.value(), processing_duration_seconds);
+      slammer->robotInWorld(), message->timestamp.value(), processing_duration_seconds);
   }
 
   // ds run benchmark evaluation

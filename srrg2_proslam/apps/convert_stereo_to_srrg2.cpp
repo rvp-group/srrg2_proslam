@@ -79,6 +79,11 @@ int main(int argc_, char** argv_) {
   Isometry3f transformation_right_from_left(Isometry3f::Identity());
   transformation_right_from_left.translation() =
     camera_calibration_matrix.fullPivLu().solve(baseline_to_camera_left);
+
+  const float& t_x = transformation_right_from_left.translation()(0);
+  if (t_x < 0) {
+    transformation_right_from_left = transformation_right_from_left.inverse();
+  }
   std::cerr << transformation_right_from_left.matrix() << std::endl;
   std::cerr << "reconstructed baseline: "
             << camera_calibration_matrix * transformation_right_from_left.translation()

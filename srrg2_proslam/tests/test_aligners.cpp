@@ -12,7 +12,7 @@ int main(int argc_, char** argv_) {
   return srrg2_test::runTests(argc_, argv_, true /*use test folder*/);
 }
 
-TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjective) {
+TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProcessorProjective) {
   projection_matrix << 200, 0, 100, 0, 200, 100, 0, 0, 1;
   canvas_size << 1000, 1000;
   CorrespondenceFinderProjectiveKDTree2D3DPtr correspondence_finder(
@@ -64,7 +64,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjective) {
   }
 
   // srrg projector for camera information
-  AlignerSliceProjectivePtr slice_projective(new AlignerSliceProjective);
+  AlignerSliceProcessorProjectivePtr slice_projective(new AlignerSliceProcessorProjective);
   //  slice_projective->param_base_frame_id.setValue("base_frame");
   //  slice_projective->param_frame_id.setValue("camera_left");
   slice_projective->param_fixed_slice_name.setValue("points");
@@ -112,7 +112,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjective) {
   // ds set aligner working buffers
   aligner->setFixed(measurements);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   //  aligner->setPlatform(platform);
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
@@ -126,10 +126,10 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjective) {
             static_cast<size_t>(points_in_camera_fixed.size()));
   ASSERT_EQ(scene_property.value()->size(), static_cast<size_t>(points_in_world_moving.size()));
 
-  std::cerr << "estimate: " << geometry3d::t2tnq(aligner->estimate()).transpose() << std::endl;
+  std::cerr << "estimate: " << geometry3d::t2tnq(aligner->movingInFixed()).transpose() << std::endl;
   std::cerr << "r_in_w  : " << geometry3d::t2tnq(pose).transpose() << std::endl;
 
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * pose);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * pose);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.15);
   ASSERT_LT_ABS(error(1), 0.15);
@@ -139,7 +139,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjective) {
   ASSERT_LT_ABS(error(5), 0.005);
 }
 
-TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjectiveWithSensor) {
+TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProcessorProjectiveWithSensor) {
   projection_matrix << 200, 0, 100, 0, 200, 100, 0, 0, 1;
   canvas_size << 1000, 1000;
   CorrespondenceFinderProjectiveKDTree2D3DPtr correspondence_finder(
@@ -199,7 +199,8 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjectiveWithSensor) {
   }
 
   // srrg projector for camera information
-  AlignerSliceProjectiveWithSensorPtr slice_projective(new AlignerSliceProjectiveWithSensor);
+  AlignerSliceProcessorProjectiveWithSensorPtr slice_projective(
+    new AlignerSliceProcessorProjectiveWithSensor);
   slice_projective->param_base_frame_id.setValue("base_frame");
   slice_projective->param_frame_id.setValue("camera_left");
   slice_projective->param_fixed_slice_name.setValue("points");
@@ -247,7 +248,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjectiveWithSensor) {
   // ds set aligner working buffers
   aligner->setFixed(measurements);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   aligner->setPlatform(platform);
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
@@ -261,12 +262,13 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjectiveWithSensor) {
             static_cast<size_t>(points_in_camera_fixed.size()));
   ASSERT_EQ(scene_property.value()->size(), static_cast<size_t>(points_in_world_moving.size()));
 
-  //  std::cerr << "estimate: " << geometry3d::t2tnq(aligner->estimate()).transpose() << std::endl;
-  //  std::cerr << "inv_est : " << geometry3d::t2tnq(aligner->estimate().inverse()).transpose()
+  //  std::cerr << "estimate: " << geometry3d::t2tnq(aligner->movingInFixed()).transpose() <<
+  //  std::endl; std::cerr << "inv_est : " <<
+  //  geometry3d::t2tnq(aligner->movingInFixed()).transpose()
   //            << std::endl;
   //  std::cerr << "r_in_w  : " << geometry3d::t2tnq(pose).transpose() << std::endl;
 
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * pose);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * pose);
 
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.15);
@@ -276,8 +278,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProjectiveWithSensor) {
   ASSERT_LT_ABS(error(4), 0.005);
   ASSERT_LT_ABS(error(5), 0.005);
 }
-/*
-TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor) {
+TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProcessorProjectiveDepthWithSensor) {
   projection_matrix << 200, 0, 100, 0, 200, 100, 0, 0, 1;
   canvas_size << 1000, 1000;
   CorrespondenceFinderProjectiveKDTree3D3DPtr correspondence_finder(
@@ -301,6 +302,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
   Isometry3f pose(Isometry3f::Identity());
   sensor_poses.push_back(pose * sensor_in_robot);
   pose.translation() += Vector3f(0, 0, -1);
+  pose.linear().noalias() = geometry3d::a2r(Vector3f(0.1, 0.01, -0.001));
   sensor_poses.push_back(pose * sensor_in_robot);
 
   PlatformPtr platform(new Platform);
@@ -314,8 +316,8 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
   const Vector3f mean(10, 10, 10);
   const Vector3f deviation(5, 5, 5);
   generateMap(number_of_points, mean, deviation, SensorType::Camera);
-  ASSERT_EQ(points_in_sensor[0].size(), 98);
-  ASSERT_EQ(points_in_sensor_projected_in_canvas[0].size(), 98);
+  ASSERT_EQ(points_in_sensor[0].size(), 96);
+  ASSERT_EQ(points_in_sensor_projected_in_canvas[0].size(), 96);
 
   // ds populate world points with unique random descriptors
   for (PointIntensityDescriptor3f& point_in_world : points_in_world) {
@@ -324,6 +326,8 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
     point_in_world.descriptor() = descriptor;
   }
 
+  PointIntensityDescriptor3fVectorCloud points_in_camera_fixed;
+  points_in_camera_fixed.reserve(points_in_camera_fixed.size());
   // ds populate corresponding points with matching, random 32-bit descriptors
   for (size_t i = 0; i < 2; ++i) {
     for (const Correspondence& correspondence : correspondences_sensor_to_world[i]) {
@@ -331,14 +335,22 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
         points_in_world[correspondence.moving_idx].descriptor();
     }
     for (const Correspondence& correspondence : correspondences_canvas_to_sensor[i]) {
-      points_in_sensor_projected_in_canvas[i][correspondence.fixed_idx].descriptor() =
-        points_in_sensor[i][correspondence.moving_idx].descriptor();
+      auto& pspc        = points_in_sensor_projected_in_canvas[i][correspondence.fixed_idx];
+      pspc.descriptor() = points_in_sensor[i][correspondence.moving_idx].descriptor();
+      if (i == 1) {
+        PointIntensityDescriptor3f p;
+        p.coordinates().head<2>() = pspc.coordinates();
+        p.coordinates().z() = points_in_sensor[i][correspondence.moving_idx].coordinates().z();
+        p.intensity()       = pspc.intensity();
+        p.descriptor()      = pspc.descriptor();
+        points_in_camera_fixed.emplace_back(p);
+      }
     }
   }
 
   // srrg projector for camera information
-  AlignerSliceProjectiveDepthWithSensorPtr slice_projective(
-    new AlignerSliceProjectiveDepthWithSensor);
+  AlignerSliceProcessorProjectiveDepthWithSensorPtr slice_projective(
+    new AlignerSliceProcessorProjectiveDepthWithSensor);
   slice_projective->param_base_frame_id.setValue("base_frame");
   slice_projective->param_frame_id.setValue("camera_left");
   slice_projective->param_fixed_slice_name.setValue("points");
@@ -349,15 +361,12 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
   MultiAligner3DQRPtr aligner(new MultiAligner3DQR);
   aligner->param_slice_processors.pushBack(slice_projective);
   aligner->param_max_iterations.setValue(10);
-
-  PointIntensityDescriptor2fVectorCloud points_in_camera_fixed =
-    points_in_sensor_projected_in_canvas[1];
-  PointIntensityDescriptor3fVectorCloud points_in_world_moving = points_in_sensor[0];
+  PointIntensityDescriptor3fVectorCloud points_in_world_moving = points_in_world;
 
   // ds allocate scene properties TODO uagh kill it with fire
   // ds the dynamic containers need to be dynamically allocated as they are freed internally!
   PropertyContainerDynamic* measurements(new PropertyContainerDynamic());
-  Property_<PointIntensityDescriptor2fVectorCloud*> measurements_property(
+  Property_<PointIntensityDescriptor3fVectorCloud*> measurements_property(
     slice_projective->param_fixed_slice_name.value(),
     "",
     nullptr,
@@ -371,7 +380,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
     &points_in_world_moving,
     nullptr);
 
-  for (PointIntensityDescriptor2f& pc : points_in_camera_fixed) {
+  for (PointIntensityDescriptor3f& pc : points_in_camera_fixed) {
     pc.statistics().allocate();
   }
   for (PointIntensityDescriptor3f& pw : points_in_world_moving) {
@@ -386,12 +395,13 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
   // ds set aligner working buffers
   aligner->setFixed(measurements);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   aligner->setPlatform(platform);
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
   // ds compute relative transform between fixed and moving
   aligner->compute();
+
   ASSERT_TRUE(aligner->status() == AlignerBase::Success);
 
   //  std::cerr << aligner->iterationStats() << std::endl;
@@ -400,11 +410,11 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
             static_cast<size_t>(points_in_camera_fixed.size()));
   ASSERT_EQ(scene_property.value()->size(), static_cast<size_t>(points_in_world_moving.size()));
 
-  std::cerr << "estimate: " << geometry3d::t2tnq(aligner->estimate()).transpose() << std::endl;
+  std::cerr << "estimate: " << geometry3d::t2tnq(aligner->movingInFixed().inverse()).transpose()
+            << std::endl;
   std::cerr << "r_in_w  : " << geometry3d::t2tnq(pose).transpose() << std::endl;
 
-  const Vector6f error =
-    geometry3d::t2tnq(aligner->estimate().inverse() * pose * sensor_in_robot.inverse());
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * pose);
 
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.15);
@@ -414,12 +424,11 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, SE3ProjectiveDepthWithSensorErrorFactor
   ASSERT_LT_ABS(error(4), 0.005);
   ASSERT_LT_ABS(error(5), 0.005);
 }
-*/
 
-TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceStereoProjectiveWithSensor) {
+TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceProcessorProjectiveStereoWithSensor) {
   projection_matrix << 200, 0, 100, 0, 200, 100, 0, 0, 1;
   canvas_size << 1000, 1000;
-  offset_second_sensor << -0.5, 0, 0;
+  offset_second_sensor << 0.5, 0, 0;
   CorrespondenceFinderProjectiveKDTree4D3DPtr correspondence_finder(
     new CorrespondenceFinderProjectiveKDTree4D3D);
   correspondence_finder->param_maximum_descriptor_distance.setValue(75);
@@ -433,7 +442,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceStereoProjectiveWithSensor)
   correspondence_finder->param_projector->param_range_max.setValue(10);
   correspondence_finder->param_projector->setCameraMatrix(projection_matrix);
 
-  Isometry3f sensor_in_robot    = Isometry3f::Identity();
+  sensor_in_robot               = Isometry3f::Identity();
   sensor_in_robot.translation() = Vector3f(0.2, 0.3, 0.4);
   sensor_in_robot.linear()      = geometry3d::a2r(Vector3f(0, M_PI * 0.05, 0));
 
@@ -485,8 +494,8 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceStereoProjectiveWithSensor)
   }
 
   // srrg projector for camera information
-  AlignerSliceStereoProjectiveWithSensorPtr slice_projective(
-    new AlignerSliceStereoProjectiveWithSensor);
+  AlignerSliceProcessorProjectiveStereoWithSensorPtr slice_projective(
+    new AlignerSliceProcessorProjectiveStereoWithSensor);
   slice_projective->param_base_frame_id.setValue("base_frame");
   slice_projective->param_frame_id.setValue("camera_left");
   slice_projective->param_fixed_slice_name.setValue("points");
@@ -542,7 +551,7 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceStereoProjectiveWithSensor)
   // ds set aligner working buffers
   aligner->setFixed(measurements);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   aligner->setPlatform(platform);
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
@@ -556,10 +565,14 @@ TEST_F(SyntheticWorldWithDescriptorsSE3, AlignerSliceStereoProjectiveWithSensor)
             static_cast<size_t>(points_in_camera_fixed.size()));
   ASSERT_EQ(scene_property.value()->size(), static_cast<size_t>(points_in_world_moving.size()));
 
-  std::cerr << "estimate: " << geometry3d::t2tnq(aligner->estimate()).transpose() << std::endl;
-  std::cerr << "r_in_w  : " << geometry3d::t2tnq(pose).transpose() << std::endl;
+  std::cerr << "w_in_r_est: " << geometry3d::t2tnq(aligner->movingInFixed()).transpose()
+            << std::endl;
 
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * pose);
+  std::cerr << "r_in_w_est: " << geometry3d::t2tnq(aligner->movingInFixed().inverse()).transpose()
+            << std::endl;
+  std::cerr << "r_in_w    : " << geometry3d::t2tnq(pose).transpose() << std::endl;
+
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * pose);
 
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.15);
@@ -588,7 +601,8 @@ TEST_F(KITTI, 00To01_SE3StereoPositErrorFactorInfoDiagonal_CFGT) {
   factor->setEnabled(true);
   factor->setCameraMatrix(camera_calibration_matrix);
   factor->setImageDim(Vector2f(image_cols, image_rows));
-  factor->setBaselinePixels(baseline_left_to_right_pixels);
+  factor->setBaselineLeftInRightPixels(
+    -baseline_right_in_left_pixels /*we need the l_in_r -> we put a minus*/);
   factor->setFixed(measurements[1]);
   factor->setMoving(points_in_camera_00);
   factor->setCorrespondences(correspondences_camera_01_from_00);
@@ -613,7 +627,7 @@ TEST_F(KITTI, 00To01_SE3StereoPositErrorFactorInfoDiagonal_CFGT) {
   // ds optimize from zero guess
   variable->setEstimate(Isometry3f::Identity());
   solver.compute();
-  const Vector6f error = geometry3d::t2tnq(variable->estimate().inverse() * camera_01_from_00);
+  const Vector6f error = geometry3d::t2tnq(variable->estimate() * camera_01_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.15);
   ASSERT_LT_ABS(error(1), 0.15);
@@ -641,7 +655,7 @@ TEST_F(KITTI, 00To01_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiveBF) {
   }
 
   // ds set perfect estimate
-  finder.setEstimate(camera_01_from_00);
+  finder.setLocalMapInSensor(camera_01_in_00.inverse());
 
   CorrespondenceVector correspondences_01_from_00;
   finder.setFixed(&measurements[1]);
@@ -668,7 +682,8 @@ TEST_F(KITTI, 00To01_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiveBF) {
   factor->setEnabled(true);
   factor->setCameraMatrix(camera_calibration_matrix);
   factor->setImageDim(Vector2f(image_cols, image_rows));
-  factor->setBaselinePixels(baseline_left_to_right_pixels);
+  factor->setBaselineLeftInRightPixels(
+    -baseline_right_in_left_pixels /*we need the l_in_r -> we put a minus*/);
   factor->setFixed(measurements[1]);
   factor->setMoving(points_in_camera_00);
   factor->setCorrespondences(correspondences_01_from_00);
@@ -704,7 +719,7 @@ TEST_F(KITTI, 00To01_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiveBF) {
     // ds optimize
     variable->setEstimate(Isometry3f::Identity());
     solver.compute();
-    const Vector6f error = geometry3d::t2tnq(variable->estimate().inverse() * camera_01_from_00);
+    const Vector6f error = geometry3d::t2tnq(variable->estimate() * camera_01_in_00);
     std::cerr << "error (manifold): " << error.transpose() << std::endl;
     ASSERT_LT_ABS(error(0), 0.1);
     ASSERT_LT_ABS(error(1), 0.1);
@@ -732,7 +747,7 @@ TEST_F(KITTI, 00To01_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiveBF) {
     // ds optimize
     variable->setEstimate(Isometry3f::Identity());
     solver.compute();
-    const Vector6f error = geometry3d::t2tnq(variable->estimate().inverse() * camera_01_from_00);
+    const Vector6f error = geometry3d::t2tnq(variable->estimate() * camera_01_in_00);
     std::cerr << "error (manifold): " << error.transpose() << " (WEIGHTED)" << std::endl;
     ASSERT_LT_ABS(error(0), 0.1);
     ASSERT_LT_ABS(error(1), 0.1);
@@ -761,7 +776,7 @@ TEST_F(KITTI, Highway_274To275_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiv
   }
 
   // ds set perfect estimate
-  finder.setEstimate(highway_camera_275_from_274);
+  finder.setLocalMapInSensor(highway_camera_275_in_274.inverse());
 
   CorrespondenceVector correspondences_275_from_274;
   finder.setFixed(&highway_measurements[1]);
@@ -788,7 +803,8 @@ TEST_F(KITTI, Highway_274To275_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiv
   factor->setEnabled(true);
   factor->setCameraMatrix(camera_calibration_matrix);
   factor->setImageDim(Vector2f(image_cols, image_rows));
-  factor->setBaselinePixels(baseline_left_to_right_pixels);
+  factor->setBaselineLeftInRightPixels(
+    -baseline_right_in_left_pixels /*we need the l_in_r -> we put a minus*/);
   factor->setFixed(highway_measurements[1]);
   factor->setMoving(highway_points_in_camera_274);
   factor->setCorrespondences(correspondences_275_from_274);
@@ -825,8 +841,7 @@ TEST_F(KITTI, Highway_274To275_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiv
     // ds optimize
     variable->setEstimate(Isometry3f::Identity());
     solver.compute();
-    const Vector6f error =
-      geometry3d::t2tnq(variable->estimate().inverse() * highway_camera_275_from_274);
+    const Vector6f error = geometry3d::t2tnq(variable->estimate() * highway_camera_275_in_274);
     std::cerr << "error (manifold): " << error.transpose() << std::endl;
     ASSERT_LT_ABS(error(0), 0.1);
     ASSERT_LT_ABS(error(1), 0.1);
@@ -854,8 +869,7 @@ TEST_F(KITTI, Highway_274To275_SE3StereoPositErrorFactorInfoDiagonal_CFProjectiv
     // ds optimize
     variable->setEstimate(Isometry3f::Identity());
     solver.compute();
-    const Vector6f error =
-      geometry3d::t2tnq(variable->estimate().inverse() * highway_camera_275_from_274);
+    const Vector6f error = geometry3d::t2tnq(variable->estimate() * highway_camera_275_in_274);
     std::cerr << "error (manifold): " << error.transpose() << " (WEIGHTED)" << std::endl;
     ASSERT_LT_ABS(error(0), 0.1);
     ASSERT_LT_ABS(error(1), 0.1);
@@ -873,13 +887,13 @@ TEST_F(ICL, 00To50_AlignerProjective_Bruteforce) {
   ASSERT_NOTNULL(aligner);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceProjectiveDepthPtr slice_projective_depth =
-    std::dynamic_pointer_cast<AlignerSliceProjectiveDepth>(
+  AlignerSliceProcessorProjectiveDepthPtr slice_projective_depth =
+    std::dynamic_pointer_cast<AlignerSliceProcessorProjectiveDepth>(
       aligner->param_slice_processors.getSharedPtr(0));
   ASSERT_NOTNULL(slice_projective_depth);
 
   // ds configure a projective only slice
-  AlignerSliceProjectivePtr slice_projective(new AlignerSliceProjective());
+  AlignerSliceProcessorProjectivePtr slice_projective(new AlignerSliceProcessorProjective());
   ASSERT_NOTNULL(slice_projective);
   ASSERT_NOTNULL(slice_projective->param_finder.value());
   ASSERT_NOTNULL(slice_projective->param_robustifier.value());
@@ -923,7 +937,7 @@ TEST_F(ICL, 00To50_AlignerProjective_Bruteforce) {
   // ds set aligner working buffers
   aligner->setFixed(measurements);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
   // ds compute relative transform between fixed and moving
@@ -937,7 +951,7 @@ TEST_F(ICL, 00To50_AlignerProjective_Bruteforce) {
             static_cast<size_t>(points_in_camera_00.size()));
 
   // ds validate relative error in translation and rotation
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * camera_50_from_00);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * camera_50_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.01);
   ASSERT_LT_ABS(error(1), 0.01);
@@ -954,8 +968,9 @@ TEST_F(ICL, 00To50_AlignerProjectiveDepth_Bruteforce) {
   ASSERT_NOTNULL(aligner);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceProjectiveDepthPtr slice = std::dynamic_pointer_cast<AlignerSliceProjectiveDepth>(
-    aligner->param_slice_processors.getSharedPtr(0));
+  AlignerSliceProcessorProjectiveDepthPtr slice =
+    std::dynamic_pointer_cast<AlignerSliceProcessorProjectiveDepth>(
+      aligner->param_slice_processors.getSharedPtr(0));
   ASSERT_NOTNULL(slice);
   ASSERT_NOTNULL(slice->param_robustifier.value());
 
@@ -993,7 +1008,7 @@ TEST_F(ICL, 00To50_AlignerProjectiveDepth_Bruteforce) {
   // ds set aligner working buffers
   aligner->setFixed(measurements);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
   // ds compute relative transform between fixed and moving
@@ -1007,7 +1022,7 @@ TEST_F(ICL, 00To50_AlignerProjectiveDepth_Bruteforce) {
             static_cast<size_t>(points_in_camera_00.size()));
 
   // ds validate relative error in translation and rotation
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * camera_50_from_00);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * camera_50_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.01);
   ASSERT_LT_ABS(error(1), 0.01);
@@ -1024,8 +1039,9 @@ TEST_F(ICL, 00To50_AlignerProjectiveDepth_ProjectiveBF) {
   ASSERT_NOTNULL(aligner);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceProjectiveDepthPtr slice = std::dynamic_pointer_cast<AlignerSliceProjectiveDepth>(
-    aligner->param_slice_processors.getSharedPtr(0));
+  AlignerSliceProcessorProjectiveDepthPtr slice =
+    std::dynamic_pointer_cast<AlignerSliceProcessorProjectiveDepth>(
+      aligner->param_slice_processors.getSharedPtr(0));
   ASSERT_NOTNULL(slice);
   ASSERT_NOTNULL(slice->param_robustifier.value());
 
@@ -1063,7 +1079,7 @@ TEST_F(ICL, 00To50_AlignerProjectiveDepth_ProjectiveBF) {
   // ds set aligner working buffers
   aligner->setFixed(measurements);
   aligner->setMoving(map);
-  aligner->setEstimate(camera_50_from_00);
+  aligner->setMovingInFixed(camera_50_in_00);
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
   // ds compute relative transform between fixed and moving
@@ -1077,7 +1093,7 @@ TEST_F(ICL, 00To50_AlignerProjectiveDepth_ProjectiveBF) {
             static_cast<size_t>(points_in_camera_00.size()));
 
   // ds validate relative error in translation and rotation
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * camera_50_from_00);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * camera_50_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.01);
   ASSERT_LT_ABS(error(1), 0.01);
@@ -1094,8 +1110,9 @@ TEST_F(KITTI, 00To01_Aligner_Bruteforce) {
   ASSERT_NOTNULL(aligner);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr slice = std::dynamic_pointer_cast<AlignerSliceStereoProjective>(
-    aligner->param_slice_processors.getSharedPtr(0));
+  AlignerSliceProcessorProjectiveStereoPtr slice =
+    std::dynamic_pointer_cast<AlignerSliceProcessorProjectiveStereo>(
+      aligner->param_slice_processors.getSharedPtr(0));
   ASSERT_NOTNULL(slice);
   ASSERT_NOTNULL(slice->param_robustifier.value());
   slice->param_robustifier->param_chi_threshold.setValue(1000);
@@ -1138,7 +1155,7 @@ TEST_F(KITTI, 00To01_Aligner_Bruteforce) {
   // ds set aligner working buffers
   aligner->setFixed(measurement_container);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
   // ds compute relative transform between fixed and moving
@@ -1152,7 +1169,7 @@ TEST_F(KITTI, 00To01_Aligner_Bruteforce) {
             static_cast<size_t>(points_in_camera_00.size()));
 
   // ds validate relative error in translation and rotation
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * camera_01_from_00);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * camera_01_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.1);
   ASSERT_LT_ABS(error(1), 0.1);
@@ -1169,8 +1186,9 @@ TEST_F(KITTI, 00To01_Aligner_ProjectiveCircle) {
   ASSERT_NOTNULL(aligner);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr slice = std::dynamic_pointer_cast<AlignerSliceStereoProjective>(
-    aligner->param_slice_processors.getSharedPtr(0));
+  AlignerSliceProcessorProjectiveStereoPtr slice =
+    std::dynamic_pointer_cast<AlignerSliceProcessorProjectiveStereo>(
+      aligner->param_slice_processors.getSharedPtr(0));
   ASSERT_NOTNULL(slice);
   ASSERT_NOTNULL(slice->param_robustifier.value());
   slice->param_robustifier->param_chi_threshold.setValue(1000);
@@ -1218,7 +1236,7 @@ TEST_F(KITTI, 00To01_Aligner_ProjectiveCircle) {
   // ds set aligner working buffers
   aligner->setFixed(measurement_container);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
   // ds compute relative transform between fixed and moving
@@ -1232,7 +1250,7 @@ TEST_F(KITTI, 00To01_Aligner_ProjectiveCircle) {
             static_cast<size_t>(points_in_camera_00.size()));
 
   // ds validate relative error in translation and rotation
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * camera_01_from_00);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * camera_01_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.05);
   ASSERT_LT_ABS(error(1), 0.05);
@@ -1249,8 +1267,9 @@ TEST_F(KITTI, 00To02_Aligner_Bruteforce) {
   ASSERT_NOTNULL(aligner);
   ASSERT_NOTNULL(aligner->param_solver.value());
   ASSERT_EQ(aligner->param_slice_processors.size(), 2);
-  AlignerSliceStereoProjectivePtr slice = std::dynamic_pointer_cast<AlignerSliceStereoProjective>(
-    aligner->param_slice_processors.getSharedPtr(0));
+  AlignerSliceProcessorProjectiveStereoPtr slice =
+    std::dynamic_pointer_cast<AlignerSliceProcessorProjectiveStereo>(
+      aligner->param_slice_processors.getSharedPtr(0));
   ASSERT_NOTNULL(slice);
   ASSERT_NOTNULL(slice->param_robustifier.value());
   slice->param_robustifier->param_chi_threshold.setValue(1000);
@@ -1292,7 +1311,7 @@ TEST_F(KITTI, 00To02_Aligner_Bruteforce) {
   // ds set aligner working buffers
   aligner->setFixed(measurement_container);
   aligner->setMoving(map);
-  aligner->setEstimate(Isometry3f::Identity());
+  aligner->setMovingInFixed(Isometry3f::Identity());
   ASSERT_EQ(aligner->status(), AlignerBase::Status::Fail);
 
   // ds compute relative transform between fixed and moving
@@ -1308,7 +1327,7 @@ TEST_F(KITTI, 00To02_Aligner_Bruteforce) {
             static_cast<size_t>(points_in_camera_00.size()));
 
   // ds validate relative error in translation and rotation
-  const Vector6f error = geometry3d::t2tnq(aligner->estimate().inverse() * camera_02_from_00);
+  const Vector6f error = geometry3d::t2tnq(aligner->movingInFixed() * camera_02_in_00);
   std::cerr << "error (manifold): " << error.transpose() << std::endl;
   ASSERT_LT_ABS(error(0), 0.1);
   ASSERT_LT_ABS(error(1), 0.1);

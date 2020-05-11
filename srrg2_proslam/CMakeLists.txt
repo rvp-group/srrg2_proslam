@@ -32,8 +32,8 @@ catkin_package(
   INCLUDE_DIRS
     src
   LIBRARIES
-    srrg2_proslam_adaptation_library
-    srrg2_proslam_localization_library
+    srrg2_proslam_sensor_processing_library
+    srrg2_proslam_registration_library
     srrg2_proslam_mapping_library
     srrg2_proslam_tracking_library
   CATKIN_DEPENDS

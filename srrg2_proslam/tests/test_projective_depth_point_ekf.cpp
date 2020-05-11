@@ -1,5 +1,7 @@
 #include "fixtures.hpp"
-#include "srrg2_proslam_mapping/landmarks/filters/projective_depth_point_ekf.h"
+#include "srrg2_proslam/mapping/landmarks/filters/projective_depth_point_ekf.h"
+
+#include "srrg2_proslam/mapping/instances.cpp"
 
 // ds sampling configuration for synthetic tests
 constexpr size_t number_of_runs        = 100;
@@ -32,7 +34,7 @@ TEST_F(SyntheticDouble, ProjectiveDepthPointEKF_Transforms_FullNoise) {
       transition_covariance *= 0.1 /*generous noise estimate*/;
       Matrix3d measurement_covariance(Matrix3d::Identity());
       measurement_covariance *= 10.0 /*generous noise estimate*/;
-      filter.setTransition(camera_transitions_noisy[j], transition_covariance);
+      filter.setWorldInSensor(camera_transitions_noisy[j], transition_covariance);
       filter.setMeasurement(point_projections_depth_noisy[j + 1], measurement_covariance);
       filter.compute();
 

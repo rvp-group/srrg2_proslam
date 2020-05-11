@@ -1,4 +1,4 @@
-add_subdirectory(srrg2_proslam_adaptation)
-add_subdirectory(srrg2_proslam_localization)
-add_subdirectory(srrg2_proslam_mapping)
-add_subdirectory(srrg2_proslam_tracking)
+add_subdirectory(srrg2_proslam/mapping)
+add_subdirectory(srrg2_proslam/registration)
+add_subdirectory(srrg2_proslam/sensor_processing)
+add_subdirectory(srrg2_proslam/tracking)

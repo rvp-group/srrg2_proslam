@@ -1,26 +1,27 @@
 add_executable(compute_sparse_stereo_gt compute_sparse_stereo_gt.cpp)
 target_link_libraries(compute_sparse_stereo_gt
-  srrg2_proslam_adaptation_library
+  srrg2_proslam_sensor_processing_library
+  srrg2_proslam_registration_library
 )
 
 add_executable(example_feature_extractor example_feature_extractor.cpp)
 target_link_libraries(example_feature_extractor
-  srrg2_proslam_adaptation_library
+  srrg2_proslam_sensor_processing_library
 )
 
 add_executable(example_feature_matcher example_feature_matcher.cpp)
 target_link_libraries(example_feature_matcher
-  srrg2_proslam_adaptation_library
+  srrg2_proslam_sensor_processing_library
 )
 
 add_executable(example_projective_search_patterns example_projective_search_patterns.cpp)
 target_link_libraries(example_projective_search_patterns
-  srrg2_proslam_adaptation_library
+  srrg2_proslam_sensor_processing_library
 )
 
 add_executable(example_unproject_rgbd example_unproject_rgbd.cpp)
 target_link_libraries(example_unproject_rgbd
-  srrg2_proslam_adaptation_library
+  srrg2_proslam_sensor_processing_library
   pthread
   ${QGLViewer_LIBRARIES}
   ${SRRG_QT_LIBRARIES}

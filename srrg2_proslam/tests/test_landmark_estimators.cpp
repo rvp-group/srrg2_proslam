@@ -1,7 +1,9 @@
 #include "fixtures.hpp"
-#include "srrg2_proslam_mapping/landmarks/landmark_estimator_ekf.h"
-#include "srrg2_proslam_mapping/landmarks/landmark_estimator_pose_based_smoother.h"
-#include "srrg2_proslam_mapping/landmarks/landmark_estimator_weighted_mean.h"
+#include "srrg2_proslam/mapping/landmarks/landmark_estimator_ekf.h"
+#include "srrg2_proslam/mapping/landmarks/landmark_estimator_pose_based_smoother.h"
+#include "srrg2_proslam/mapping/landmarks/landmark_estimator_weighted_mean.h"
+
+#include "srrg2_proslam/mapping/instances.cpp"
 
 using namespace srrg2_core;
 using namespace srrg2_test;
@@ -41,7 +43,7 @@ TEST_F(LandmarkWorldNoNoise, LandmarkEstimatorWeightedMean3D3D) {
       points_in_sensor_projected[index_pose]);
 
     // ds sensor pose is the same for all correspondences
-    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose].inverse());
+    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose]);
 
     // ds for all correspondences of the current pose
     for (const Correspondence& correspondence : correspondences_sensor_to_world[index_pose]) {
@@ -55,7 +57,7 @@ TEST_F(LandmarkWorldNoNoise, LandmarkEstimatorWeightedMean3D3D) {
           getPointUnprojected(points_in_image[index_measurement].coordinates(), depth_meters));
 
         // ds update landmark position estimate using the estimator
-        estimator.setEstimateInTracker(point_in_camera);
+        estimator.setLandmarkInSensor(point_in_camera);
         estimator.setLandmark(&landmarks[iterator->second]);
         estimator.compute();
       }
@@ -85,7 +87,7 @@ TEST_F(LandmarkWorldNoNoise, LandmarkEstimatorProjectiveEKF3D) {
       points_in_sensor_projected[index_pose]);
 
     // ds update filter for current pose
-    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose].inverse());
+    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose]);
 
     // ds for all correspondences of the current pose
     for (const Correspondence& correspondence : correspondences_sensor_to_world[index_pose]) {
@@ -128,7 +130,7 @@ TEST_F(LandmarkWorldNoNoise, LandmarkEstimatorProjectiveDepthEKF3D) {
       points_in_sensor_projected[index_pose]);
 
     // ds update filter for current pose
-    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose].inverse());
+    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose]);
 
     // ds for all correspondences of the current pose
     for (const Correspondence& correspondence : correspondences_sensor_to_world[index_pose]) {
@@ -171,12 +173,12 @@ TEST_F(LandmarkWorldNoNoise, LandmarkEstimatorStereoProjectiveEKF3D) {
   // ds update landmarks for the remaining poses (and observations)
   for (size_t index_pose = 1; index_pose < sensor_poses.size(); ++index_pose) {
     const PointIntensityDescriptor2fVectorCloud& points_in_image_left(
-      points_in_sensor_projected[index_pose]);
+      points_in_sensor_projected_in_canvas[index_pose]);
     const PointIntensityDescriptor2fVectorCloud& points_in_image_right(
-      points_in_sensor_projected_second[index_pose]);
+      points_in_sensor_projected_in_canvas_second[index_pose]);
 
     // ds update filter for current pose
-    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose].inverse());
+    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose]);
 
     // ds for all correspondences of the current pose
     for (const Correspondence& correspondence : correspondences_sensor_to_world[index_pose]) {
@@ -225,7 +227,7 @@ TEST_F(LandmarkWorldNoNoise, LandmarkEstimatorPoseBasedSmoother4D3D) {
       points_in_sensor[index_pose]);
 
     // ds update filter for current pose
-    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose].inverse());
+    estimator.setTransforms(sensor_poses[index_pose], sensor_poses[index_pose]);
 
     // ds for all correspondences of the current pose
     for (const Correspondence& correspondence : correspondences_sensor_to_world[index_pose]) {
@@ -248,7 +250,7 @@ TEST_F(LandmarkWorldNoNoise, LandmarkEstimatorPoseBasedSmoother4D3D) {
 
         // ds update landmark position estimate using the estimator
         estimator.setMeasurement(measurement_stereo);
-        estimator.setEstimateInTracker(point_in_camera);
+        estimator.setLandmarkInSensor(point_in_camera);
         estimator.setLandmark(&landmarks[iterator->second]);
         estimator.compute();
       }
@@ -266,12 +268,12 @@ void LandmarkWorldNoNoise::createWorldWithLandmarks(
   constexpr size_t number_of_points = 1000;
   constexpr size_t number_of_poses  = 10;
   projection_matrix << 200, 0, 100, 0, 200, 100, 0, 0, 1;
-  canvas_size << 1000, 1000;
+  canvas_size << 200, 200;
   Matrix3f initial_position_covariance(Matrix3f::Identity());
   initial_position_covariance *= 0.01; // ds 10*10 cm^2
 
   // ds stereo setup
-  offset_second_sensor = Vector3f(-0.5 /*0.5m horizontal baseline*/, 0, 0);
+  offset_second_sensor = Vector3f(0.5 /*0.5m horizontal baseline*/, 0, 0);
 
   // ds generate uniform scenario
   const Isometry3f start_pose(Isometry3f::Identity());
@@ -301,7 +303,7 @@ void LandmarkWorldNoNoise::createWorldWithLandmarks(
 
     // ds unproject point to obtain world coordinates (i.e. landmark coordinates)
     PointIntensityDescriptor3f new_landmark;
-    new_landmark.coordinates() = sensor_poses[0].inverse() * coordinates_in_camera;
+    new_landmark.coordinates() = sensor_poses[0] * coordinates_in_camera;
 
     // ds initialize statistics field
     new_landmark.statistics().allocate();
@@ -329,9 +331,9 @@ void LandmarkWorldNoNoise::validateLandmarks(
   float mean_absolute_position_error_meters = 0;
   for (size_t index_landmark = 0; index_landmark < landmarks_.size(); ++index_landmark) {
     const size_t index_world_point = correspondences_sensor_to_world[0][index_landmark].moving_idx;
-    ASSERT_NEAR_EIGEN(landmarks_[index_landmark].coordinates().cast<float>(),
-                      points_in_world[index_world_point].coordinates(),
-                      0.001 /*1 mm*/);
+    //    ASSERT_NEAR_EIGEN(landmarks_[index_landmark].coordinates().cast<float>(),
+    //                      points_in_world[index_world_point].coordinates(),
+    //                      0.001 /*1 mm*/);
     ASSERT_NEAR_EIGEN(landmarks_[index_landmark].statistics().state().cast<float>(),
                       points_in_world[index_world_point].coordinates(),
                       0.001 /*1 mm*/);

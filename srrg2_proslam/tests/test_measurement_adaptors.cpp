@@ -4,8 +4,8 @@ int main(int argc_, char** argv_) {
   return srrg2_test::runTests(argc_, argv_, true /*use test folder*/);
 }
 
-TEST_F(SceneFlow, MeasurementAdaptorStereoProjectiveBruteforce) {
-  MeasurementAdaptorStereoProjective adaptor;
+TEST_F(SceneFlow, RawDataPreprocessorStereoProjectiveBruteforce) {
+  RawDataPreprocessorStereoProjective adaptor;
   adaptor.param_feature_extractor_right.setValue(adaptor.param_feature_extractor.value());
   adaptor.param_feature_extractor->param_target_number_of_keypoints.setValue(500);
   adaptor.param_feature_extractor->param_detector_threshold.setValue(5);
@@ -18,8 +18,8 @@ TEST_F(SceneFlow, MeasurementAdaptorStereoProjectiveBruteforce) {
   PointIntensityDescriptor4fVectorCloud stereo_points;
 
   // ds adapt measurements and store results in points
-  ASSERT_TRUE(adaptor.setMeasurement(rigid_stereo_message));
-  adaptor.setDest(&stereo_points);
+  ASSERT_TRUE(adaptor.setRawData(rigid_stereo_message));
+  adaptor.setMeas(&stereo_points);
   adaptor.compute();
 
   // ds validate expected feature extraction and matching result
@@ -31,8 +31,8 @@ TEST_F(SceneFlow, MeasurementAdaptorStereoProjectiveBruteforce) {
   ASSERT_EQ(number_of_inlier_stereo_matches, static_cast<size_t>(43));
 }
 
-TEST_F(SceneFlow, MeasurementAdaptorStereoProjectiveEpipolar) {
-  MeasurementAdaptorStereoProjective adaptor;
+TEST_F(SceneFlow, RawDataPreprocessorStereoProjectiveEpipolar) {
+  RawDataPreprocessorStereoProjective adaptor;
   adaptor.param_feature_extractor_right.setValue(adaptor.param_feature_extractor.value());
   adaptor.param_feature_extractor->param_target_number_of_keypoints.setValue(500);
   adaptor.param_feature_extractor->param_detector_threshold.setValue(5);
@@ -43,8 +43,8 @@ TEST_F(SceneFlow, MeasurementAdaptorStereoProjectiveEpipolar) {
   PointIntensityDescriptor4fVectorCloud stereo_points;
 
   // ds adapt measurements and store results in points
-  ASSERT_TRUE(adaptor.setMeasurement(rigid_stereo_message));
-  adaptor.setDest(&stereo_points);
+  ASSERT_TRUE(adaptor.setRawData(rigid_stereo_message));
+  adaptor.setMeas(&stereo_points);
   adaptor.compute();
 
   // ds validate expected feature extraction and matching result
@@ -56,17 +56,19 @@ TEST_F(SceneFlow, MeasurementAdaptorStereoProjectiveEpipolar) {
   ASSERT_EQ(number_of_inlier_stereo_matches, static_cast<size_t>(59));
 }
 
-TEST_F(ICL, MeasurementAdaptorMonocularDepth) {
-  MeasurementAdaptorMonocularDepth adaptor;
+TEST_F(ICL, RawDataPreprocessorMonocularDepth) {
+  RawDataPreprocessorMonocularDepth adaptor;
   adaptor.param_feature_extractor->param_target_number_of_keypoints.setValue(500);
   adaptor.param_feature_extractor->param_detector_threshold.setValue(5);
+  adaptor.param_topic_rgb.setValue("/camera/rgb/image_color");
+  adaptor.param_topic_depth.setValue("/camera/depth/image");
 
   // ds final adaptor output: image coordinates with corresponding depth and descriptor
   PointIntensityDescriptor3fVectorCloud points_with_depth_and_descriptor;
 
   // ds adapt measurements and store results in points
-  ASSERT_TRUE(adaptor.setMeasurement(message_00));
-  adaptor.setDest(&points_with_depth_and_descriptor);
+  ASSERT_TRUE(adaptor.setRawData(message_00));
+  adaptor.setMeas(&points_with_depth_and_descriptor);
   adaptor.compute();
 
   // ds validate expected feature extraction result
@@ -86,8 +88,8 @@ TEST_F(ICL, MeasurementAdaptorMonocularDepth) {
   }
 }
 
-TEST_F(KITTI, MeasurementAdaptorStereoProjectiveBruteforce) {
-  MeasurementAdaptorStereoProjective adaptor;
+TEST_F(KITTI, RawDataPreprocessorStereoProjectiveBruteforce) {
+  RawDataPreprocessorStereoProjective adaptor;
   adaptor.param_feature_extractor_right.setValue(adaptor.param_feature_extractor.value());
   adaptor.param_feature_extractor->param_target_number_of_keypoints.setValue(500);
   adaptor.param_feature_extractor->param_detector_threshold.setValue(5);
@@ -100,16 +102,16 @@ TEST_F(KITTI, MeasurementAdaptorStereoProjectiveBruteforce) {
   PointIntensityDescriptor4fVectorCloud stereo_points;
 
   // ds adapt measurements and store results in points
-  ASSERT_TRUE(adaptor.setMeasurement(messages[0]));
-  adaptor.setDest(&stereo_points);
+  ASSERT_TRUE(adaptor.setRawData(messages[0]));
+  adaptor.setMeas(&stereo_points);
   adaptor.compute();
 
   // ds validate expected feature extraction and matching result
   ASSERT_EQ(stereo_points.size(), static_cast<size_t>(213));
 }
 
-TEST_F(KITTI, MeasurementAdaptorStereoProjectiveEpipolar) {
-  MeasurementAdaptorStereoProjective adaptor;
+TEST_F(KITTI, RawDataPreprocessorStereoProjectiveEpipolar) {
+  RawDataPreprocessorStereoProjective adaptor;
   adaptor.param_feature_extractor_right.setValue(adaptor.param_feature_extractor.value());
   adaptor.param_feature_extractor->param_target_number_of_keypoints.setValue(500);
   adaptor.param_feature_extractor->param_detector_threshold.setValue(5);
@@ -120,8 +122,8 @@ TEST_F(KITTI, MeasurementAdaptorStereoProjectiveEpipolar) {
   PointIntensityDescriptor4fVectorCloud stereo_points;
 
   // ds adapt measurements and store results in points
-  ASSERT_TRUE(adaptor.setMeasurement(messages[0]));
-  adaptor.setDest(&stereo_points);
+  ASSERT_TRUE(adaptor.setRawData(messages[0]));
+  adaptor.setMeas(&stereo_points);
   adaptor.compute();
 
   // ds validate expected feature extraction and matching result

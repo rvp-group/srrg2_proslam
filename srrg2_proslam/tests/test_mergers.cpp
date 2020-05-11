@@ -1,18 +1,19 @@
 #include "fixtures.hpp"
-#include "srrg2_proslam_mapping/landmarks/landmark_estimator_ekf.h"
-#include "srrg2_proslam_mapping/landmarks/landmark_estimator_pose_based_smoother.h"
-#include "srrg2_proslam_mapping/landmarks/landmark_estimator_weighted_mean.h"
+#include "srrg2_proslam/mapping/landmarks/landmark_estimator_ekf.h"
+#include "srrg2_proslam/mapping/landmarks/landmark_estimator_pose_based_smoother.h"
+#include "srrg2_proslam/mapping/landmarks/landmark_estimator_weighted_mean.h"
 
 int main(int argc_, char** argv_) {
   return srrg2_test::runTests(argc_, argv_, true /*use test folder*/);
 }
 
 TEST_F(SyntheticFloat, MergerCorrespondence3D_FullIntersection) {
-  // ds merge points
-  MergerCorrespondence3D merger;
-  merger.setTransform(world_in_camera_current);
+  MergerCorrespondencePointIntensityDescriptor3f merger;
+
+  //  merger.param_unprojector->setCameraPose(camera_current_in_world);
+  merger.setMeasurementInScene(camera_current_in_world);
   merger.setScene(&points_in_world);
-  merger.setMoving(&points_in_camera);
+  merger.setMeasurement(&points_in_camera);
   merger.setCorrespondences(&correspondences);
   merger.compute();
 
@@ -28,15 +29,15 @@ TEST_F(SyntheticFloat, MergerCorrespondence3D_FullIntersection) {
 }
 
 TEST_F(ICL, MergerCorrespondence3DSparse00To00) {
-  MergerCorrespondence3D merger;
+  MergerCorrespondencePointIntensityDescriptor3f merger;
   merger.param_maximum_response.setValue(50);
   merger.param_maximum_distance_geometry_squared.setValue(0.25);
 
   // ds set buffers to processor (no motion and identical measurements)
-  merger.setTransform(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
   ASSERT_EQ(points_in_camera_00.size(), 321);
-  merger.setMoving(&points_in_camera_00);
+  merger.setMeasurement(&points_in_camera_00);
   ASSERT_EQ(points_in_camera_00.size(), 321);
   merger.setCorrespondences(&correspondences_camera_00_from_00);
   ASSERT_EQ(correspondences_camera_00_from_00.size(), 321);
@@ -62,16 +63,16 @@ TEST_F(ICL, MergerCorrespondence3DSparse00To00) {
 }
 
 TEST_F(ICL, MergerCorrespondence3D_Sparse00To01) {
-  MergerCorrespondence3D merger;
+  MergerCorrespondencePointIntensityDescriptor3f merger;
   merger.param_maximum_response.setValue(50);
   merger.param_maximum_distance_geometry_squared.setValue(0.25);
   merger.param_target_number_of_merges.setValue(1000);
 
   // ds set buffers to processor
-  merger.setTransform(camera_01_from_00.inverse());
+  merger.setMeasurementInScene(camera_01_in_00);
   merger.setScene(&points_in_camera_00);
   ASSERT_EQ(points_in_camera_00.size(), 321);
-  merger.setMoving(&points_in_camera_01);
+  merger.setMeasurement(&points_in_camera_01);
   ASSERT_EQ(points_in_camera_01.size(), 338);
   merger.setCorrespondences(&correspondences_camera_01_from_00);
   ASSERT_EQ(correspondences_camera_00_from_00.size(), 321);
@@ -103,14 +104,14 @@ TEST_F(ICL, MergerCorrespondence3D_Sparse00To01) {
 }
 
 TEST_F(KITTI, MergerCorrespondence3D_00To00) {
-  MergerCorrespondence3D merger;
+  MergerCorrespondencePointIntensityDescriptor3f merger;
   merger.param_maximum_response.setValue(50);
   merger.param_maximum_distance_geometry_squared.setValue(25);
 
   // ds set buffers to processor (no motion and identical measurements)
-  merger.setTransform(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&points_in_camera_00);
+  merger.setMeasurement(&points_in_camera_00);
   merger.setCorrespondences(&correspondences_camera_00_from_00);
 
   // ds backup points for assertions
@@ -132,15 +133,15 @@ TEST_F(KITTI, MergerCorrespondence3D_00To00) {
   }
 }
 
-TEST_F(KITTI, MergerCorrespondence3D_00To01) {
-  MergerCorrespondence3D merger;
+TEST_F(KITTI, MergerCorrespondencePointIntensityDescriptor3f_00To01) {
+  MergerCorrespondencePointIntensityDescriptor3f merger;
   merger.param_maximum_response.setValue(50);
   merger.param_maximum_distance_geometry_squared.setValue(25);
 
   // ds set buffers to processor
-  merger.setTransform(camera_01_from_00.inverse());
+  merger.setMeasurementInScene(camera_01_in_00);
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&points_in_camera_01 /* passing triangulated measurements*/);
+  merger.setMeasurement(&points_in_camera_01 /* passing triangulated measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_01);
 
   // ds backup points for assertions
@@ -178,9 +179,9 @@ TEST_F(ICL, MergerCorrespondenceProjectiveDepth3D_Sparse_00To00) {
   merger.param_target_number_of_merges.setValue(1000);
 
   // ds set buffers to processor
-  merger.setTransform(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements_projective_depth_00 /*passing measurements*/);
+  merger.setMeasurement(&measurements_projective_depth_00 /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_00);
 
   // ds backup points for assertions
@@ -213,9 +214,9 @@ TEST_F(ICL, MergerCorrespondenceProjectiveDepth3D_Sparse_00To01) {
   merger.param_target_number_of_merges.setValue(1000);
 
   // ds set buffers to processor
-  merger.setTransform(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements_projective_depth_01 /*passing measurements*/);
+  merger.setMeasurement(&measurements_projective_depth_01 /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_01_from_00);
 
   // ds backup points for assertions
@@ -269,10 +270,10 @@ TEST_F(ICL, 00To00_MergerCorrespondenceProjectiveDepthEKF_Sparse) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(Isometry3f::Identity());
-  merger.setTrackerInWorld(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
+  merger.setMeasurementInWorld(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements_projective_depth_00 /*passing measurements*/);
+  merger.setMeasurement(&measurements_projective_depth_00 /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_00);
 
   // ds backup points for assertions
@@ -321,10 +322,10 @@ TEST_F(ICL, 00To01_MergerCorrespondenceProjectiveDepthEKF_Sparse) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(Isometry3f::Identity());
-  merger.setTrackerInWorld(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
+  merger.setMeasurementInWorld(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements_projective_depth_01 /*passing measurements*/);
+  merger.setMeasurement(&measurements_projective_depth_01 /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_01_from_00);
 
   // ds backup points for assertions
@@ -378,10 +379,10 @@ TEST_F(KITTI, 00To00_MergerTriangulation_WeightedMean) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(Isometry3f::Identity());
-  merger.setTrackerInWorld(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
+  merger.setMeasurementInWorld(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements[0] /*passing measurements*/);
+  merger.setMeasurement(&measurements[0] /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_00);
 
   // ds backup points for assertions
@@ -435,10 +436,10 @@ TEST_F(KITTI, 00To00_MergerTriangulation_PoseBasedSmoother) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(Isometry3f::Identity());
-  merger.setTrackerInWorld(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
+  merger.setMeasurementInWorld(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements[0] /*passing measurements*/);
+  merger.setMeasurement(&measurements[0] /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_00);
 
   // ds backup points for assertions
@@ -485,10 +486,10 @@ TEST_F(KITTI, 00To01_MergerTriangulation_WeightedMean) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(camera_01_from_00.inverse());
-  merger.setTrackerInWorld(camera_01_from_00);
+  merger.setMeasurementInScene(camera_01_in_00);
+  merger.setMeasurementInWorld(camera_01_in_00);
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements[1] /*passing measurements*/);
+  merger.setMeasurement(&measurements[1] /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_01);
 
   // ds backup points for assertions
@@ -550,10 +551,10 @@ TEST_F(KITTI, 00To01_MergerTriangulation_PoseBasedSmoother) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(camera_01_from_00.inverse());
-  merger.setTrackerInWorld(camera_01_from_00);
+  merger.setMeasurementInScene(camera_01_in_00);
+  merger.setMeasurementInWorld(camera_01_in_00);
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements[1] /*passing measurements*/);
+  merger.setMeasurement(&measurements[1] /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_01);
 
   // ds backup points for assertions
@@ -607,15 +608,16 @@ TEST_F(KITTI, 00To01_MergerTriangulation_Pruned_WeightedMean) {
   points_measured_in_camera_01.reserve(points_in_camera_00.size());
   CorrespondenceVector correspondences;
   correspondences.reserve(points_in_camera_00.size());
+  Isometry3f camera_00_in_01 = camera_01_in_00.inverse();
   for (size_t i = 0; i < points_in_camera_00.size(); ++i) {
     PointIntensityDescriptor4f point;
-    const Vector3f point_in_camera_01 = camera_01_from_00 * points_in_camera_00[i].coordinates();
+    const Vector3f point_in_camera_01 = camera_00_in_01 * points_in_camera_00[i].coordinates();
     if (point_in_camera_01.z() <= 0) {
       continue;
     }
 
     Vector3f point_in_image_left  = camera_calibration_matrix * point_in_camera_01;
-    Vector3f point_in_image_right = point_in_image_left + baseline_left_to_right_pixels;
+    Vector3f point_in_image_right = point_in_image_left - baseline_right_in_left_pixels;
     point_in_image_left /= point_in_image_left.z();
     point_in_image_right /= point_in_image_right.z();
     ASSERT_EQ(point_in_image_left(1), point_in_image_right(1));
@@ -646,10 +648,10 @@ TEST_F(KITTI, 00To01_MergerTriangulation_Pruned_WeightedMean) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(camera_01_from_00.inverse());
-  merger.setTrackerInWorld(camera_01_from_00);
+  merger.setMeasurementInScene(camera_01_in_00);
+  merger.setMeasurementInWorld(camera_01_in_00);
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&points_measured_in_camera_01);
+  merger.setMeasurement(&points_measured_in_camera_01);
   merger.setCorrespondences(&correspondences);
   const size_t number_of_measurements = points_measured_in_camera_01.size();
 
@@ -699,10 +701,10 @@ TEST_F(KITTI, 00To00_MergerStereoProjectiveEKF) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(Isometry3f::Identity());
-  merger.setTrackerInWorld(Isometry3f::Identity());
+  merger.setMeasurementInScene(Isometry3f::Identity());
+  merger.setMeasurementInWorld(Isometry3f::Identity());
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements[0] /*passing measurements*/);
+  merger.setMeasurement(&measurements[0] /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_00);
 
   // ds backup points for assertions
@@ -753,10 +755,10 @@ TEST_F(KITTI, 00To01_MergerStereoProjectiveEKF) {
   }
 
   // ds set buffers to processor
-  merger.setTransform(camera_01_from_00.inverse());
-  merger.setTrackerInWorld(camera_01_from_00);
+  merger.setMeasurementInScene(camera_01_in_00);
+  merger.setMeasurementInWorld(camera_01_in_00);
   merger.setScene(&points_in_camera_00);
-  merger.setMoving(&measurements[1] /*passing measurements*/);
+  merger.setMeasurement(&measurements[1] /*passing measurements*/);
   merger.setCorrespondences(&correspondences_camera_00_from_01);
 
   // ds backup points for assertions
