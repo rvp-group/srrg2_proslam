@@ -53,11 +53,11 @@ catkin build srrg2_proslam --catkin-make-args tests
 ## How to run
 You should use our package [`srrg2_executor`](https://github.com/srrg-sapienza/srrg2_executor) to run the pipeline. In the [`configurations`](https://github.com/srrg-sapienza/srrg2_proslam/tree/master/configurations) directory you will find some template configuration files:
 
-* [`kitti`](../configurations/kitti.conf): example [dataset](https://drive.google.com/open?id=1u_d4qp5p7eyWQk4zZhI8x13uEB_Ut7pC).
-* [`euroc`](../configurations/euroc.conf): example [dataset](https://drive.google.com/open?id=1g6_QudgZetukSTe6MwYxauaei_8n_lza).
-* [`malaga`](../configurations/malaga.conf): example [dataset](https://drive.google.com/open?id=1u_d4qp5p7eyWQk4zZhI8x13uEB_Ut7pC)
-* [`icl`](../configurations/icl.conf): example [dataset](https://drive.google.com/open?id=1HBEmz0qBxFUTrk1K4pJIUNPpJYhgMHYD)
-* [`tum`](../configurations/tum.conf): example [dataset](https://drive.google.com/open?id=1qPavF3iHuoeG7P_cVUUQ_nyXKE0miR-z)
+* [`kitti`](../configurations/kitti.conf): example [dataset](https://drive.google.com/open?id=1oclt483BUNtD1tQrD80F9pOoHUe0BUqF).
+* [`euroc`](../configurations/euroc.conf): example [dataset](https://drive.google.com/open?id=1C4eDSpR2tASllj5atIt1CiIxy1iSmVm9).
+* [`malaga`](../configurations/malaga.conf): example [dataset](https://drive.google.com/open?id=12QTLG8as90KF8R2hJUpF8mP8ZZmn5HtV)
+* [`icl`](../configurations/icl.conf): example [dataset](https://drive.google.com/open?id=1B1-Tl7qYB1RZ4Vcp_igUyQAjFfXkYFiS)
+* [`tum`](../configurations/tum.conf): example [dataset](https://drive.google.com/open?id=1i7gA4VLYtYvhJqutflC7n0KKWkt2Eap_)
 
 ###### Example Output (Stereo)
 ![multi-lidar-output](../configurations/OUTPUT_MAP_kitti_00.png)
