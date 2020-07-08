@@ -275,6 +275,8 @@ int main(int argc, char** argv) {
   ArgumentString arg_sync_name(&cmd, "ssn", "sync-name", "sync name in the config", "sync");
   ArgumentString arg_source_name(&cmd, "fsn", "source-name", "source name in the config", "source");
   ArgumentString arg_trajectory(&cmd, "t", "trajectory", "trajectory filename", "");
+  ArgumentString arg_output_timing(&cmd, "ts", "timing", "output timings", "");
+
   // ArgumentString arg_trajectory_type(
   //   &cmd, "tt", "trajectory-type", "choose between { kitti , tum }", "kitti");
   cmd.parse();
@@ -324,8 +326,14 @@ int main(int argc, char** argv) {
   // ia start processing the thing
   LOG << "start processing\n";
   BaseSensorMessagePtr msg = nullptr;
+  // ia timings
+  double total_dataset_time = 0.f;
+  double total_compute_time = 0.f;
+  size_t processed_msgs     = 0;
 
   requires_platform = (std::dynamic_pointer_cast<MessagePlatformSink>(slammer_ptr) != 0);
+  total_dataset_time       = srrg2_core::getTime();
+
   while ((msg = sync_ptr->getMessage())) {
     if (requires_platform) {
       retrievePlatformSource(slammer_ptr, sync_ptr);
@@ -334,14 +342,32 @@ int main(int argc, char** argv) {
         requires_platform = false;
       }
     }
+    double t0 = srrg2_core::getTime();
     benchamin.putMessage(msg);
+    total_compute_time += (srrg2_core::getTime() - t0);
+    ++processed_msgs;
   }
+  total_dataset_time = srrg2_core::getTime() - total_dataset_time;
+  // ia timings
+  const double mean_frame_time = total_compute_time / (double) (processed_msgs);
+  const double mean_fps        = 1.f / mean_frame_time;
 
   if (arg_trajectory.isSet()) {
     LOG << "saving trajectory in [ " << arg_trajectory.value() << " ]\n";
     benchamin.saveTrajectoryKitti(arg_trajectory.value() + "_KITTI");
     benchamin.saveTrajectoryTUM(arg_trajectory.value() + "_TUM");
   }
+
+  // ia timing dump
+  if (arg_output_timing.isSet()) {
+    LOG << "dumping timings in [ " << arg_output_timing.value() << " ]\n";
+    std::ofstream stream(arg_output_timing.value(), std::ofstream::out);
+    stream << "total_frames= " << processed_msgs << " total_compute_time= " << total_compute_time
+           << " mean_frame_time= " << mean_frame_time << " mean_frame_hz= " << mean_fps
+           << std::endl;
+    stream.close();
+  }
+
 
   // if (arg_trajectory.isSet()) {
   //   if (arg_trajectory_type.value() == "kitti") {
